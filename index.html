@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>CG Quán Ăn - Đặt món & đặt bàn</title>
+  <link rel="stylesheet" href="/styles.css?v=15">
+  <link rel="stylesheet" href="/ui-fix.css?v=15">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#home"><span class="brand-logo">CG</span><span><b id="shopName">CG Quán Ăn</b><small>Đặt món • Đặt bàn • Báo Telegram</small></span></a>
+    <nav class="desktop-nav"><a href="#home">Trang chủ</a><a href="#menu">Menu</a><a href="#booking">Đặt bàn</a><a href="#dinein">Gọi món</a><a href="/admin.html">Admin</a></nav>
+    <button id="openCartBtn" class="cart-btn" type="button">Giỏ hàng <b id="cartBadge">0</b></button>
+  </header>
+
+  <nav class="mobile-nav"><a href="#home">Trang chủ</a><a href="#menu">Menu</a><a href="#booking">Đặt bàn</a><a href="#dinein">Gọi món</a><a href="/admin.html">Admin</a></nav>
+
+  <main>
+    <section id="home" class="hero">
+      <div><span class="pill">CG Quán Ăn</span><h1>Đặt món nhanh,<br>đặt bàn rõ ràng.</h1><p class="hero-text">Menu realtime, chọn bàn theo sơ đồ, đặt trước món khi đặt bàn và thông báo về Telegram cho quán.</p><div class="hero-actions"><a href="#menu" class="btn primary">Xem menu</a><a href="#booking" class="btn soft">Đặt bàn</a></div></div>
+      <div class="hero-card"><div class="steam">♨</div><p>Món nổi bật</p><h2 id="featuredName">Đang tải menu...</h2><strong id="featuredPrice">---</strong><button id="featuredAddBtn" class="btn primary" type="button">Thêm món này</button></div>
+    </section>
+
+    <section class="steps"><article><b>1</b><span>Chọn món hoặc bàn</span></article><article><b>2</b><span>Điền thông tin rõ ràng</span></article><article><b>3</b><span>Quán nhận Telegram</span></article></section>
+
+    <section id="menu" class="section">
+      <div class="section-head"><div><p class="eyebrow">Menu món</p><h2>Chọn món</h2><p class="muted">Giỏ hàng chỉ tính tiền món. Phí ship chỉ xác nhận khi đặt giao hàng.</p></div><div class="filters"><label><span>Tìm món</span><input id="searchInput" placeholder="Ví dụ: cơm gà, bò, trà đào..."></label><label><span>Loại món</span><select id="categoryFilter"><option value="all">Tất cả</option><option value="main">Món chính</option><option value="drink">Đồ uống</option><option value="snack">Ăn vặt</option><option value="dessert">Tráng miệng</option></select></label><label><span>Sắp xếp</span><select id="sortSelect"><option value="popular">Phổ biến</option><option value="priceAsc">Giá thấp trước</option><option value="priceDesc">Giá cao trước</option></select></label></div></div>
+      <div id="menuGrid" class="menu-grid"><div class="panel">Đang tải menu...</div></div>
+    </section>
+
+    <section id="booking" class="section">
+      <div class="section-head"><div><p class="eyebrow">Đặt bàn</p><h2>Sơ đồ bàn realtime</h2><p class="muted">Chọn ngày/giờ để xem bàn trống. Nếu đã chọn món trong giỏ, món sẽ gửi kèm đặt bàn.</p></div></div>
+      <div class="booking-layout">
+        <div class="panel"><div class="panel-head"><div><h3>Sơ đồ bàn</h3><p id="tableRealtimeHint" class="muted">Đang cập nhật bàn...</p></div><div class="selected-table">Bàn đã chọn: <b id="selectedTableLabel">B01</b></div></div><div class="table-map"><svg viewBox="0 0 760 640" role="img" aria-label="Sơ đồ bàn"><rect x="28" y="28" width="704" height="584" rx="42" class="map-bg"></rect><path d="M70 545 C210 525 345 525 500 500 C610 482 680 450 720 405" class="road-main"></path><path d="M615 500 L720 410" class="bridge"></path><rect x="215" y="70" width="315" height="86" rx="22" class="kitchen"></rect><text x="372" y="124" class="map-white">Bếp</text><path d="M220 240 C260 160 420 165 470 260 C525 365 470 520 345 535 C230 548 170 430 190 330 C196 295 205 262 220 240Z" class="pond-fill"></path><path d="M220 240 C260 160 420 165 470 260 C525 365 470 520 345 535 C230 548 170 430 190 330 C196 295 205 262 220 240Z" class="pond-line"></path><text x="345" y="360" class="map-green">Ao cá</text><g class="table-node selected" tabindex="0" data-table="B01"><rect x="92" y="302" width="185" height="125" rx="24"></rect><text x="184" y="368">B01</text></g><g class="table-node" tabindex="0" data-table="B02"><rect x="562" y="92" width="138" height="118" rx="30"></rect><text x="631" y="154">B02</text></g><g class="table-node" tabindex="0" data-table="B03"><rect x="565" y="252" width="142" height="112" rx="24"></rect><text x="636" y="312">B03</text></g><g class="table-node" tabindex="0" data-table="B04"><rect x="438" y="420" width="195" height="110" rx="26"></rect><text x="535" y="480">B04</text></g><g class="table-node" tabindex="0" data-table="B05"><rect x="220" y="550" width="320" height="65" rx="28"></rect><text x="380" y="585">B05</text></g></svg></div><div class="legend"><span><i class="dot table-dot"></i>Trống</span><span><i class="dot reserved-dot"></i>Đã đặt</span><span><i class="dot using-dot"></i>Đang dùng</span><span><i class="dot locked-dot"></i>Khoá</span><span><i class="dot pond-dot"></i>Ao cá</span><span><i class="dot kitchen-dot"></i>Bếp</span><span><i class="dot road-dot"></i>Đường</span><span><i class="dot bridge-dot"></i>Cầu</span></div></div>
+        <form id="bookingForm" class="panel form-panel"><h3>Thông tin đặt bàn</h3><input id="selectedTableInput" type="hidden" name="table" value="B01"><label class="field"><span>Họ và tên khách đặt bàn</span><input name="name" required placeholder="Ví dụ: Anh Quân"></label><label class="field"><span>Số điện thoại để quán liên hệ</span><input name="phone" required placeholder="Ví dụ: 09xxxxxxxx"></label><div class="form-row"><label class="field"><span>Ngày khách đến quán</span><input name="date" type="date" required></label><label class="field"><span>Giờ khách đến quán</span><input name="time" type="time" required></label></div><label class="field"><span>Số lượng khách</span><input name="guests" type="number" min="1" value="2" required></label><label class="field"><span>Ghi chú cho quán</span><textarea name="note" placeholder="Ví dụ: có trẻ em, người lớn tuổi..."></textarea></label><button class="btn primary full" type="submit">Gửi đặt bàn</button></form>
+      </div>
+    </section>
+
+    <section id="dinein" class="section"><div class="section-head"><div><p class="eyebrow">Gọi món tại bàn</p><h2>Khách đang ngồi tại quán</h2><p class="muted">Chọn món vào giỏ, nhập mã bàn để gọi thêm vào phiên bàn.</p></div></div><form id="dineInForm" class="panel dinein-panel"><div class="form-row"><label class="field"><span>Mã bàn đang ngồi</span><input name="table" required placeholder="Ví dụ: B03"></label><label class="field"><span>Tên khách nếu có</span><input name="customerName" placeholder="Ví dụ: Anh Tuấn"></label></div><label class="field"><span>Ghi chú gọi thêm</span><textarea name="note" placeholder="Ví dụ: ra trước món lẩu..."></textarea></label><button class="btn primary full" type="submit">Gọi thêm món vào phiên bàn</button></form></section>
+
+    <section id="contact" class="section"><div class="contact-card"><div><p class="eyebrow">Liên hệ</p><h2 id="contactName">CG Quán Ăn</h2><p>Hotline: <b id="contactPhone">0559876962</b></p><p>Địa chỉ: <b id="contactAddress">Địa chỉ quán</b></p></div><a href="#menu" class="btn primary">Đặt món ngay</a></div></section>
+  </main>
+
+  <aside id="cartDrawer" class="cart-drawer"><div class="drawer-head"><div><p class="eyebrow">Giỏ hàng</p><h2>Món đã chọn</h2></div><button id="closeCartBtn" class="round-btn" type="button">×</button></div><div id="cartItems" class="cart-items"></div><div class="coupon-box"><label><span>Mã giảm giá</span><input id="couponInput" placeholder="QUAN10"></label><button id="applyCouponBtn" class="btn soft" type="button">Áp dụng</button></div><div class="total-line"><span>Tổng tiền món</span><b id="cartTotal">0đ</b></div><form id="orderForm" class="drawer-form"><label class="field"><span>Tên người nhận</span><input name="name" required placeholder="Tên khách"></label><label class="field"><span>Số điện thoại</span><input name="phone" required placeholder="09xxxxxxxx"></label><label class="field"><span>Địa chỉ giao hàng</span><input name="address" required placeholder="Số nhà, thôn/xã..."></label><label class="field"><span>Ghi chú ship</span><textarea name="note" placeholder="Ví dụ: gọi trước khi giao..."></textarea></label><button class="btn primary full" type="submit">Đặt giao hàng / ship</button></form></aside>
+  <div id="miniCartPopup" class="mini-cart-popup"><div class="mini-cart-head"><div><b id="miniCartName">Đã thêm món</b><span id="miniCartCount">0 món</span></div><button id="miniCartCloseBtn" type="button">×</button></div><div class="mini-cart-body"><span>Tổng tiền món</span><strong id="miniCartTotal">0đ</strong></div><button id="miniCartOpenBtn" class="btn primary full" type="button">Xem giỏ hàng</button></div>
+  <div id="overlay" class="overlay"></div><div id="successModal" class="modal"><div class="modal-card"><div class="success-icon">✓</div><h2 id="modalTitle">Thành công</h2><p id="modalMessage">Đã gửi.</p><button id="modalCloseBtn" class="btn primary full" type="button">Đóng</button></div></div><div id="toast" class="toast"></div>
+  <script src="/app.js?v=15"></script>
+  <div class="copyright-credit site-credit">by: Quân</div>
+</body>
+</html>

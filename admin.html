@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Admin CG Quán Ăn</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body class="admin-page">
+  <header class="topbar admin-app-topbar">
+    <button id="drawerToggleBtn" class="drawer-toggle" type="button" aria-label="Mở menu">☰</button>
+    <a class="brand" href="/"><span class="brand-logo">CG</span><span><b>Admin CG Quán Ăn</b><small>Quản lý đơn hàng</small></span></a>
+    <button id="logoutBtn" class="btn soft logout-compact" type="button">Đăng xuất</button>
+  </header>
+  <div id="drawerBackdrop" class="drawer-backdrop"></div>
+
+  <main class="admin-main">
+    <section id="pinScreen" class="pin-screen">
+      <form id="pinForm" class="pin-card">
+        <p class="eyebrow">Admin</p>
+        <h1>Nhập PIN quản trị</h1>
+        <p class="muted">PIN lấy từ biến môi trường ADMIN_PIN trên Vercel.</p>
+        <label class="field"><span>PIN admin</span><input id="pinInput" type="password" inputmode="numeric" required></label>
+        <button class="btn primary full" type="submit">Vào admin</button>
+      </form>
+    </section>
+
+    <section id="dashboard" class="dashboard hidden">
+      <div class="admin-layout">
+        <aside id="adminDrawer" class="admin-sidebar">
+          <button id="drawerCloseBtn" class="drawer-close" type="button" aria-label="Đóng menu">×</button>
+          <div>
+            <p class="eyebrow">Dashboard</p>
+            <h1>Quản trị quán</h1>
+            <p class="muted">BigFix v14: ưu tiên ổn định, đơn và menu phải chạy trước.</p>
+          </div>
+          <div class="tabs vertical-tabs">
+            <button class="tab-btn active" data-tab="dashboard" type="button">Dashboard</button>
+            <button class="tab-btn" data-tab="orders" type="button">Đơn ship</button>
+            <button class="tab-btn" data-tab="bookings" type="button">Đặt bàn</button>
+            <button class="tab-btn" data-tab="tables" type="button">Sơ đồ bàn</button>
+            <button class="tab-btn" data-tab="sessions" type="button">Phiên bàn</button>
+            <button class="tab-btn" data-tab="menu" type="button">Menu món</button>
+            <button class="tab-btn" data-tab="inventory" type="button">Kho</button>
+            <button class="tab-btn" data-tab="analytics" type="button">Doanh thu</button>
+            <button class="tab-btn" data-tab="settings" type="button">Cài đặt</button>
+          </div>
+          <button id="refreshBtn" class="btn primary full" type="button">Tải lại dữ liệu</button>
+          <small id="refreshHint" class="refresh-hint">Tự cập nhật mỗi 2 giây</small>
+        </aside>
+
+        <section class="admin-content">
+          <div class="admin-stats admin-stats-inline">
+            <article class="stat-card-click" data-jump-status="new" data-jump-kind="orders"><b id="statNewOrders">0</b><span>Đơn ship mới</span></article>
+            <article class="stat-card-click" data-jump-status="new" data-jump-kind="bookings"><b id="statNewBookings">0</b><span>Đặt bàn mới</span></article>
+            <article class="stat-card-click" data-jump-status="new" data-jump-kind="all"><b id="statNew">0</b><span>Đơn mới</span></article>
+          </div>
+
+          <section id="dashboardPanel">
+            <div class="dashboard-head-row">
+              <div>
+                <h2>Dashboard</h2>
+                <p class="muted">Đơn mới hiện lên đầu. Dùng thanh task dưới màn hình để lọc trạng thái.</p>
+              </div>
+              <span class="live-chip">● Tự động cập nhật</span>
+            </div>
+<div id="orderViewModeBar" class="view-mode-bar" aria-label="Chế độ xem đơn">
+              <button class="view-mode active" data-kind-filter="all" type="button">Tất cả</button>
+              <button class="view-mode" data-kind-filter="bookings" type="button">Đơn đặt bàn</button>
+              <button class="view-mode" data-kind-filter="orders" type="button">Đơn ship</button>
+            </div>
+            <div id="dashboardList" class="admin-list dashboard-feed"></div>
+          </section>
+
+          <section id="ordersPanel" class="hidden">
+            <div class="panel-title-row"><h2>Đơn giao hàng / ship</h2><p class="muted">Sửa ship, xử lý, hoàn thành hoặc xoá.</p></div>
+            <div id="ordersList" class="admin-list compact-list"></div>
+          </section>
+
+          <section id="bookingsPanel" class="hidden">
+            <div class="panel-title-row"><h2>Quản lý đặt bàn</h2><p class="muted">Có hiển thị món đặt trước nếu khách đã chọn món.</p></div>
+            <div id="bookingsList" class="admin-list compact-list"></div>
+          </section>
+
+          <section id="tablesPanel" class="hidden">
+            <div class="panel-title-row">
+              <div><h2>Sơ đồ bàn realtime</h2><p class="muted">Xanh trống • Cam đặt • Đỏ đang dùng • Xám khoá</p></div>
+              <div class="form-row small-row"><input id="tableDateFilter" type="date"><input id="tableTimeFilter" type="time"></div>
+            </div>
+            <div class="admin-table-map-wrap">
+              <div class="table-map admin-table-map">
+                <svg viewBox="0 0 760 640" role="img" aria-label="Sơ đồ bàn admin">
+                  <rect x="28" y="28" width="704" height="584" rx="42" class="map-bg"></rect>
+                  <path d="M70 545 C210 525 345 525 500 500 C610 482 680 450 720 405" class="road-main"></path>
+                  <path d="M615 500 L720 410" class="bridge"></path>
+                  <rect x="215" y="70" width="315" height="86" rx="22" class="kitchen"></rect>
+                  <text x="372" y="124" class="map-white">Bếp</text>
+                  <path d="M220 240 C260 160 420 165 470 260 C525 365 470 520 345 535 C230 548 170 430 190 330 C196 295 205 262 220 240Z" class="pond-fill"></path>
+                  <path d="M220 240 C260 160 420 165 470 260 C525 365 470 520 345 535 C230 548 170 430 190 330 C196 295 205 262 220 240Z" class="pond-line"></path>
+                  <text x="345" y="360" class="map-green">Ao cá</text>
+                  <g class="table-node admin-table-node" data-admin-table="B01"><rect x="92" y="302" width="185" height="125" rx="24"></rect><text x="184" y="368">B01</text></g>
+                  <g class="table-node admin-table-node" data-admin-table="B02"><rect x="562" y="92" width="138" height="118" rx="30"></rect><text x="631" y="154">B02</text></g>
+                  <g class="table-node admin-table-node" data-admin-table="B03"><rect x="565" y="252" width="142" height="112" rx="24"></rect><text x="636" y="312">B03</text></g>
+                  <g class="table-node admin-table-node" data-admin-table="B04"><rect x="438" y="420" width="195" height="110" rx="26"></rect><text x="535" y="480">B04</text></g>
+                  <g class="table-node admin-table-node" data-admin-table="B05"><rect x="220" y="550" width="320" height="65" rx="28"></rect><text x="380" y="585">B05</text></g>
+                </svg>
+              </div>
+              <div id="tableDetail" class="panel table-detail-card">Chọn bàn để quản lý.</div>
+            </div>
+          </section>
+
+          <section id="sessionsPanel" class="hidden">
+            <div class="menu-admin-toolbar"><div><h2>Phiên bàn</h2><p class="muted">Mở bàn, gọi thêm món, chuyển/merge và thanh toán.</p></div><button id="openSessionBtn" class="btn primary" type="button">+ Mở phiên bàn</button></div>
+            <div id="sessionsList" class="admin-list compact-list"></div>
+          </section>
+
+          <section id="menuPanel" class="hidden">
+            <div class="menu-admin-toolbar"><div><h2>Quản lý menu</h2><p class="muted">Thêm/sửa/xoá món, giá gốc admin thấy, khách chỉ thấy giá bán.</p></div><button id="addMenuBtn" class="btn primary" type="button">+ Thêm món</button></div>
+            <div id="menuAdminList" class="admin-list menu-table-list"></div>
+          </section>
+
+          <section id="inventoryPanel" class="hidden">
+            <div class="menu-admin-toolbar"><div><h2>Kho nguyên liệu</h2><p class="muted">Tồn kho và cảnh báo sắp hết.</p></div><button id="addInventoryBtn" class="btn primary" type="button">+ Thêm nguyên liệu</button></div>
+            <div id="inventoryList" class="admin-list menu-table-list"></div>
+          </section>
+
+          <section id="analyticsPanel" class="hidden">
+            <div class="analytics-toolbar">
+              <div><h2>Doanh thu & lãi/lỗ</h2><p class="muted">Dashboard chi tiết, theo hôm nay/tuần/tháng/năm.</p></div>
+              <div class="range-buttons"><button class="range-btn active" data-range="day" type="button">Hôm nay</button><button class="range-btn" data-range="week" type="button">7 ngày</button><button class="range-btn" data-range="month" type="button">Tháng</button><button class="range-btn" data-range="year" type="button">Năm</button></div>
+            </div>
+            <div class="analytics-grid">
+              <article><span>Doanh thu</span><b id="reportRevenue">0đ</b></article>
+              <article><span>Giá vốn</span><b id="reportCost">0đ</b></article>
+              <article><span>Lãi</span><b id="reportProfit">0đ</b></article>
+              <article><span>Đơn hoàn thành</span><b id="reportCompleted">0</b></article>
+            </div>
+            <div id="analyticsDetail" class="analytics-detail"></div>
+            <div class="chart-card"><div class="chart-head"><h3>Sơ đồ doanh thu</h3><p class="muted">Vàng doanh thu • Xanh lãi • Đỏ lỗ</p></div><div id="revenueChart" class="revenue-chart"></div></div>
+            <div id="hourChart" class="chart-card"></div>
+            <div class="chart-card"><div class="chart-head"><h3>Món tạo doanh thu cao</h3></div><div id="topItemsList" class="top-items-list"></div></div>
+            <div class="archive-box">
+              <h3>Lưu trữ & dọn doanh thu năm cũ</h3>
+              <div class="form-row">
+                <label class="field"><span>Năm cần xem/xử lý</span><input id="archiveYearInput" type="number" min="2020" max="2100"></label>
+                <label class="field"><span>Thao tác</span><select id="archiveAction"><option value="view">Xem báo cáo năm</option><option value="closeYear">Chốt báo cáo năm</option><option value="deleteYearRevenue">Xoá doanh thu năm cũ</option></select></label>
+              </div>
+              <button id="archiveRunBtn" class="btn primary" type="button">Thực hiện</button>
+              <div id="archiveResult" class="archive-result muted"></div>
+            </div>
+          </section>
+
+          <section id="settingsPanel" class="hidden">
+            <div class="menu-admin-toolbar"><div><h2>Cài đặt vận hành</h2><p class="muted">Phí ship mặc định, miễn ship và tên quán.</p></div></div>
+            <form id="settingsForm" class="panel settings-form">
+              <label class="field"><span>Tên quán</span><input name="shopName"></label>
+              <div class="form-row"><label class="field"><span>Phí ship mặc định</span><input name="shippingFee" type="number" min="0"></label><label class="field"><span>Miễn ship từ đơn</span><input name="freeShipFrom" type="number" min="0"></label></div>
+              <button class="btn primary" type="submit">Lưu cài đặt</button>
+            </form>
+          </section>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="menuModal" class="modal"><form id="menuForm" class="modal-card menu-form-card">
+    <div class="success-icon">🍽️</div><h2 id="menuModalTitle">Thêm món</h2>
+    <input type="hidden" name="id" id="menuIdInput">
+    <label class="field"><span>Tên món</span><input name="name" required></label>
+    <div class="form-row"><label class="field"><span>Giá gốc</span><input name="originalPrice" type="number" min="0"></label><label class="field"><span>Giá bán</span><input name="price" type="number" min="0" required></label></div>
+    <div class="form-row"><label class="field"><span>Danh mục</span><select name="category"><option value="main">Món chính</option><option value="drink">Đồ uống</option><option value="snack">Ăn vặt</option><option value="dessert">Tráng miệng</option></select></label><label class="field"><span>Độ ưu tiên</span><input name="popular" type="number" min="0" value="50"></label></div>
+    <label class="field"><span>Icon nếu không có ảnh</span><input name="icon" placeholder="🍗"></label>
+    <label class="field"><span>Link ảnh món</span><input name="imageUrl" placeholder="https://..."></label>
+    <label class="field"><span>Cách hiển thị ảnh</span><select name="imageFit"><option value="custom-crop">Tự căn ảnh</option><option value="cover-center">Cắt giữa</option><option value="cover-top">Cắt trên</option><option value="cover-bottom">Cắt dưới</option><option value="contain-dark">Hiện đủ nền tối</option><option value="contain-light">Hiện đủ nền sáng</option></select></label>
+    <input type="hidden" name="imageZoom" value="100"><input type="hidden" name="imagePosX" value="50"><input type="hidden" name="imagePosY" value="50">
+    <div class="crop-editor">
+      <div class="crop-preview-card"><span>Khung xem trước ảnh món</span><div class="crop-preview-frame"><img id="cropPreviewImg" alt="Xem trước"></div><small>Khách sẽ thấy theo khung này.</small></div>
+      <div class="crop-controls"><label><span>Phóng to</span><input id="cropZoom" type="range" min="50" max="220" value="100"></label><label><span>Dịch ngang</span><input id="cropX" type="range" min="0" max="100" value="50"></label><label><span>Dịch dọc</span><input id="cropY" type="range" min="0" max="100" value="50"></label><button id="cropResetBtn" class="btn soft full" type="button">Căn giữa lại</button></div>
+    </div>
+    <label class="field"><span>Mô tả</span><textarea name="desc"></textarea></label>
+    <label class="field"><span>Tag</span><input name="tags" placeholder="hot, bestseller"></label>
+    <label class="field"><span>Trạng thái</span><select name="available"><option value="true">Đang bán</option><option value="false">Ẩn</option></select></label>
+    <div class="modal-actions"><button id="menuCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Lưu món</button></div>
+  </form></div>
+
+  <div id="inventoryModal" class="modal"><form id="inventoryForm" class="modal-card menu-form-card">
+    <div class="success-icon">📦</div><h2 id="inventoryModalTitle">Nguyên liệu</h2><input type="hidden" name="id" id="inventoryIdInput">
+    <label class="field"><span>Tên nguyên liệu</span><input name="name" required></label>
+    <div class="form-row"><label class="field"><span>Đơn vị</span><input name="unit" placeholder="kg"></label><label class="field"><span>Tồn</span><input name="stock" type="number" min="0" step="0.01"></label></div>
+    <div class="form-row"><label class="field"><span>Cảnh báo sắp hết</span><input name="minStock" type="number" min="0" step="0.01"></label><label class="field"><span>Nhà cung cấp</span><input name="supplier"></label></div>
+    <div class="form-row"><label class="field"><span>Nhập gần nhất</span><input name="lastImportQty" type="number" min="0" step="0.01"></label><label class="field"><span>Giá nhập</span><input name="lastImportPrice" type="number" min="0"></label></div>
+    <label class="field"><span>Ngày nhập</span><input name="lastImportDate" type="date"></label>
+    <label class="field"><span>Ghi chú</span><textarea name="note"></textarea></label>
+    <div class="modal-actions"><button id="inventoryCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Lưu</button></div>
+  </form></div>
+
+  <div id="tableModal" class="modal"><form id="tableForm" class="modal-card menu-form-card">
+    <div class="success-icon">🪑</div><h2 id="tableModalTitle">Quản lý bàn</h2><input type="hidden" name="id" id="tableIdInput">
+    <div class="form-row"><label class="field"><span>Tên bàn</span><input name="name"></label><label class="field"><span>Số ghế</span><input name="seats" type="number" min="1"></label></div>
+    <label class="field"><span>Khu vực</span><input name="zone"></label>
+    <label class="field"><span>Trạng thái</span><select name="status"><option value="free">Trống</option><option value="reserved">Đã đặt</option><option value="using">Đang dùng</option><option value="cleaning">Đang dọn</option><option value="locked">Khoá</option></select></label>
+    <label class="field"><span>Ghi chú</span><textarea name="note"></textarea></label>
+    <label class="field"><span>Khoá bàn</span><select name="locked"><option value="false">Không</option><option value="true">Khoá</option></select></label>
+    <div class="modal-actions"><button id="tableCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Lưu bàn</button></div>
+  </form></div>
+
+  <div id="sessionModal" class="modal"><form id="sessionForm" class="modal-card menu-form-card">
+    <div class="success-icon">🍺</div><h2>Mở phiên bàn</h2>
+    <label class="field"><span>Bàn cần mở</span><input name="table" placeholder="B03" required></label>
+    <label class="field"><span>Tên khách</span><input name="customerName"></label>
+    <label class="field"><span>SĐT nếu có</span><input name="phone"></label>
+    <label class="field"><span>Số người</span><input name="guests" type="number" min="1" value="2"></label>
+    <label class="field"><span>Ghi chú</span><textarea name="note"></textarea></label>
+    <div class="modal-actions"><button id="sessionCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Mở bàn</button></div>
+  </form></div>
+
+  <div id="moveSessionModal" class="modal"><form id="moveSessionForm" class="modal-card">
+    <div class="success-icon">🔄</div><h2>Chuyển / merge bàn</h2><input type="hidden" name="id" id="moveSessionId">
+    <label class="field"><span>Chuyển sang bàn</span><input name="toTable" placeholder="B05"></label>
+    <label class="field"><span>Merge thêm bàn</span><input name="mergeTables" placeholder="B04, B05"></label>
+    <div class="modal-actions"><button id="moveSessionCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Lưu</button></div>
+  </form></div>
+
+  <div id="shipModal" class="modal"><form id="shipForm" class="modal-card">
+    <div class="success-icon">🛵</div><h2>Sửa phí ship</h2><input type="hidden" id="shipOrderId" name="id">
+    <label class="field"><span>Phí ship mới</span><input name="shippingFee" type="number" min="0" required></label>
+    <label class="field"><span>Ghi chú báo khách</span><textarea name="shippingNote"></textarea></label>
+    <div class="modal-actions"><button id="shipCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Lưu</button></div>
+  </form></div>
+
+  <div id="confirmModal" class="modal"><div class="modal-card"><div class="warn-icon">!</div><h2 id="confirmTitle">Xác nhận</h2><p id="confirmMessage">Bạn chắc chắn?</p><div class="modal-actions"><button id="confirmCancelBtn" class="btn soft" type="button">Huỷ</button><button id="confirmOkBtn" class="btn primary" type="button">Đồng ý</button></div></div></div>
+
+  <nav id="bottomTaskBar" class="bottom-taskbar" aria-label="Lọc trạng thái đơn">
+    <button class="bottom-task active" data-status-filter="new" type="button"><span>⏳</span><b id="countNew">0</b><small>Chờ xác nhận</small></button>
+    <button class="bottom-task" data-status-filter="confirmed" type="button"><span>✅</span><b id="countConfirmed">0</b><small>Đã xác nhận</small></button>
+    <button class="bottom-task" data-status-filter="done" type="button"><span>💰</span><b id="countDone">0</b><small>Hoàn thành</small></button>
+    <button class="bottom-task" data-status-filter="cancelled" type="button"><span>❌</span><b id="countCancelled">0</b><small>Đã hủy</small></button>
+  </nav>
+
+  <div class="copyright-credit admin-credit">by: Quân</div>
+  <div id="toast" class="toast"></div>
+
+  <script src="/admin.js"></script>
+</body>
+</html>
