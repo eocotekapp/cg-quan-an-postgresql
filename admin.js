@@ -67,20 +67,25 @@ function renderDashboardItemsBox(item){
   const items = isBooking
     ? (Array.isArray(item.preorderItems) ? item.preorderItems : [])
     : (Array.isArray(item.items) ? item.items : []);
+  const total = items.reduce((sum, x) => sum + Number(x.price || 0) * Number(x.qty || 1), 0);
+  const boxTitle = isBooking ? "Món đặt trước" : "Món trong đơn";
+  const countText = items.length ? ` (${items.reduce((sum, x) => sum + Number(x.qty || 1), 0)} món)` : "";
 
-  return `<div class="dash-items-box">
-    <b>Món trong đơn</b>
+  return `<div class="dash-items-box ${items.length ? "has-items" : "no-items"}">
+    <div class="dash-items-title"><span>🍽️ ${boxTitle}${countText}</span></div>
     ${
       items.length
       ? `<div class="dash-items-list">
           ${items.map(x => `
             <p>
-              <span>${escapeHtml(x.name || "Món")} x${Number(x.qty || 1)}</span>
-              <strong>${money((x.price || 0) * (x.qty || 1))}</strong>
+              <span>${escapeHtml(x.name || "Món")}</span>
+              <em>x${Number(x.qty || 1)}</em>
+              <strong>${money(Number(x.price || 0) * Number(x.qty || 1))}</strong>
             </p>
           `).join("")}
-        </div>`
-      : `<p class="dash-items-empty">Chưa có món</p>`
+        </div>
+        <div class="dash-items-total"><span>Tạm tính món:</span><strong>${money(total)}</strong></div>`
+      : `<p class="dash-items-empty">Chưa có món đặt kèm.</p>`
     }
   </div>`;
 }
@@ -228,10 +233,13 @@ function renderMiniOrderCard(item){
       <div class="dash-order-title"><span class="dash-icon">${icon}</span><b>${title}</b><span>•</span><em>${codeText}</em></div>
       <span class="status status-${escapeHtml(item.status || "new")}">${escapeHtml(statusBadge)}</span>
     </div>
-    <div class="dash-order-info">
-      ${isBooking ? `<p>📅 ${timeLine}</p><p>👥 ${addressOrTable}</p>` : `<p>📍 ${addressOrTable}</p><p>💰 ${timeLine}</p>`}
-      <p>👤 ${name}</p>
-      <p>☎ ${phone}</p>
+    <div class="dash-order-main">
+      <div class="dash-order-info">
+        ${isBooking ? `<p>📅 ${timeLine}</p><p>👥 ${addressOrTable}</p>` : `<p>📍 ${addressOrTable}</p><p>💰 ${timeLine}</p>`}
+        <p>👤 ${name}</p>
+        <p>☎ ${phone}</p>
+      </div>
+      ${renderDashboardItemsBox(item)}
     </div>
     <div class="admin-actions dash-actions">
       ${status === "new" ? `<button class="action-btn action-confirm" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="${isBooking ? "confirmed" : "processing"}">Xác nhận</button>` : ""}
