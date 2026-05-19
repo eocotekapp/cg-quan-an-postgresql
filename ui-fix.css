@@ -1815,3 +1815,23 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
   pointer-events: none !important;
   visibility: hidden;
 }
+
+
+/* ===== v11: safe toast click-through and bottom taskbar click ===== */
+.toast {
+  pointer-events: none !important;
+}
+.toast:not(.show) {
+  pointer-events: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+#bottomTaskBar,
+.bottom-taskbar {
+  z-index: 10020 !important;
+  pointer-events: auto !important;
+}
+#bottomTaskBar *,
+.bottom-taskbar * {
+  pointer-events: auto !important;
+}

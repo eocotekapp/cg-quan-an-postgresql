@@ -33,6 +33,19 @@ async function api(path, options = {}) {
   return data;
 }
 function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+
+
+function getStatusLabel(status, fallback = "") {
+  return {
+    new: "Mới",
+    confirmed: "Đã xác nhận",
+    done: "Hoàn thành",
+    cancelled: "Đã huỷ",
+    active: "Đang dùng",
+    closed: "Đã đóng"
+  }[status] || fallback || status || "cập nhật";
+}
+
 function toast(message, type = "ok") {
   const el = $("#toast");
   if (!el) return;
@@ -112,7 +125,7 @@ function renderAppOrderCard(item){
   const secondLine = isBooking
     ? `👥 Bàn ${escapeHtml(item.table || "")} • ${escapeHtml(item.guests || "")} người`
     : `💰 ${money(item.total || 0)}${item.shippingFee ? " • Ship: " + money(item.shippingFee) : ""}`;
-  const badge = status === "new" ? "MỚI" : statusName(item.status);
+  const badge = status === "new" ? "MỚI" : getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(item.status);
 
   return `<article class="app-order-card ${isBooking ? "booking-card" : "ship-card"}">
     <div class="app-order-head">
@@ -234,7 +247,7 @@ function renderMiniOrderCard(item){
     ? `${escapeHtml(item.date || "")} • ${escapeHtml(item.time || "")}`
     : `${money(item.total || 0)}${item.shippingFee ? " • Ship: " + money(item.shippingFee) : ""}`;
   const icon = isBooking ? "🪑" : "🚚";
-  const statusBadge = status === "new" ? "MỚI" : statusName(item.status);
+  const statusBadge = status === "new" ? "MỚI" : getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(item.status);
 
   return `<article class="admin-card dashboard-order-card ${isBooking ? "booking-card" : "ship-card"}">
     <div class="dash-order-top">
@@ -382,7 +395,7 @@ function renderOrders(items){
     return `<article class="admin-card compact-card">
       <div class="compact-main">
         <div><div class="admin-code">${escapeHtml(order.orderCode||order.id)}</div><p><b>${escapeHtml(order.customer?.name||"")}</b> • ${escapeHtml(order.customer?.phone||"")}</p><p class="muted">${lines}</p></div>
-        <div><span class="status status-${escapeHtml(order.status||"new")}">${statusName(order.status)}</span><b class="compact-money">${money(order.total)}</b></div>
+        <div><span class="status status-${escapeHtml(order.status||"new")}">${getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(order.status)}</span><b class="compact-money">${money(order.total)}</b></div>
       </div>
       <p class="muted">${escapeHtml(order.customer?.address||"")} — Ship: ${money(order.shippingFee||0)} — ${escapeHtml(order.customer?.note||"Không ghi chú")}</p>
       ${itemsBox}
@@ -430,7 +443,7 @@ function renderBookings(items){
         <div><span>Giờ đặt</span><b>${escapeHtml(b.date||"")} ${escapeHtml(b.time||"")}</b><small>${b.lockStartText && b.lockEndText ? `Khóa: ${escapeHtml(b.lockStartText)} → ${escapeHtml(b.lockEndText)}` : "Chưa khóa bàn"}</small></div>
         <div><span>Số người</span><b>${escapeHtml(b.guests||"")}</b></div>
         <div><span>Bàn</span><b>${escapeHtml(b.table||"")}</b></div>
-        <div><span>Trạng thái</span><b class="status status-${escapeHtml(b.status||"new")}">${sessionIsClosed ? "Đã thanh toán / đóng phiên" : statusName(b.status)}</b></div>
+        <div><span>Trạng thái</span><b class="status status-${escapeHtml(b.status||"new")}">${sessionIsClosed ? "Đã thanh toán / đóng phiên" : getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(b.status)}</b></div>
       </div>
       <p class="muted"><b>Ghi chú:</b> ${escapeHtml(b.note||"Không có")}</p>
       ${preorderBox}
@@ -456,7 +469,7 @@ function renderTables(items){
     node.classList.add(`table-${status}`);
     node.onclick=()=>openTableForm(t||{id:node.dataset.adminTable,name:node.dataset.adminTable,seats:4,status:"free",locked:false});
   });
-  $("#tableDetail").innerHTML=items.map(t=>`<div class="table-mini-row"><b>${escapeHtml(t.id)}</b><span>${statusName(t.locked?"locked":t.status)}</span><small>${escapeHtml(t.zone||"")}</small></div>`).join("");
+  $("#tableDetail").innerHTML=items.map(t=>`<div class="table-mini-row"><b>${escapeHtml(t.id)}</b><span>${getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(t.locked?"locked":t.status)}</span><small>${escapeHtml(t.zone||"")}</small></div>`).join("");
 }
 function renderSessions(items){
   const open=items.filter(s=>s.status==="open");
@@ -602,7 +615,7 @@ function fillSettingsForm(){ const f=$("#settingsForm"); if(!f) return; f.shopNa
 
 function bindActions(){
   $$(".action-btn[data-type]").forEach(btn=>btn.onclick=()=>{
-    const label=statusName(btn.dataset.status);
+    const label=getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(btn.dataset.status);
     confirmJob = async () => {
       const payload = { type: btn.dataset.type, id: btn.dataset.id, status: btn.dataset.status };
       if (!payload.type || !payload.id || !payload.status) throw new Error("Thiếu dữ liệu nút xác nhận");
