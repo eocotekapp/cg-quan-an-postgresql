@@ -2117,3 +2117,101 @@ textarea{min-height:92px;resize:vertical}
     grid-template-columns:1fr;
   }
 }
+
+
+/* ===== v7: readable add-items modal + order item boxes ===== */
+.session-menu-modal,
+.session-menu-modal *,
+.session-add-modal,
+.session-add-modal *,
+#sessionMenuModal,
+#sessionMenuModal * {
+  text-shadow: none !important;
+}
+
+#sessionMenuModal .modal-card,
+.session-menu-modal .modal-card,
+.session-add-modal .modal-card {
+  background: #141414 !important;
+  border: 1px solid rgba(255, 214, 120, .24) !important;
+  color: #fff !important;
+}
+
+#sessionMenuModal,
+#sessionMenuModal p,
+#sessionMenuModal span,
+#sessionMenuModal label,
+#sessionMenuModal small,
+#sessionMenuModal .muted,
+.session-menu-grid p,
+.session-add-cart p,
+.session-cart-line,
+.session-cart-line span,
+.session-cart-line small {
+  color: rgba(255,255,255,.88) !important;
+  opacity: 1 !important;
+}
+
+#sessionMenuModal h1,
+#sessionMenuModal h2,
+#sessionMenuModal h3,
+#sessionMenuModal h4,
+#sessionMenuModal b,
+#sessionMenuModal strong,
+.session-menu-grid b,
+.session-add-cart b,
+.session-cart-line strong {
+  color: #fff7d6 !important;
+  opacity: 1 !important;
+  font-weight: 800 !important;
+}
+
+.session-menu-grid button,
+#sessionMenuModal button,
+.session-add-cart button {
+  color: #1b1408 !important;
+  font-weight: 800 !important;
+}
+
+.session-menu-grid article,
+.session-menu-grid .menu-card,
+.session-menu-item,
+.session-add-cart,
+.session-cart-box,
+.session-extra-box {
+  background: rgba(255,255,255,.075) !important;
+  border: 1px solid rgba(255, 214, 120, .22) !important;
+  border-radius: 16px !important;
+}
+
+.session-cart-line,
+.session-add-cart .cart-item,
+.session-extra-box .cart-item {
+  background: rgba(0,0,0,.22) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  border-radius: 12px !important;
+  padding: 9px 10px !important;
+}
+
+.dash-items-box,
+.app-order-items-box,
+.order-items-box {
+  background: rgba(255, 214, 120, .075) !important;
+  border: 1px solid rgba(255, 214, 120, .25) !important;
+  border-radius: 16px !important;
+  padding: 10px !important;
+}
+
+.dash-items-box b,
+.app-order-items-box b,
+.order-items-box b {
+  color: #ffe7a3 !important;
+  font-weight: 900 !important;
+}
+
+.dash-items-box p,
+.app-order-items-box p,
+.order-items-box p {
+  color: rgba(255,255,255,.88) !important;
+  opacity: 1 !important;
+}
