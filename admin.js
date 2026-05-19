@@ -33,6 +33,28 @@ async function api(path, options = {}) {
   return data;
 }
 function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+
+
+function renderAdminNumberedItems(items, title = "Món trong đơn") {
+  const list = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!list.length) return "";
+  const total = list.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 1), 0);
+  return `<div class="admin-order-items numbered-order-items">
+    <div class="admin-order-items-title">🍽️ ${escapeHtml(title)} <span>(${list.length} món)</span></div>
+    <div class="admin-order-items-list">
+      ${list.map((item, index) => `
+        <div class="admin-order-item-row">
+          <span class="admin-order-item-index">${index + 1}</span>
+          <span class="admin-order-item-name">${escapeHtml(item.name || item.title || "Món")}</span>
+          <span class="admin-order-item-qty">x${Number(item.qty || 1)}</span>
+          <span class="admin-order-item-price">${money(Number(item.price || 0) * Number(item.qty || 1))}</span>
+        </div>
+      `).join("")}
+    </div>
+    <div class="admin-order-items-total"><span>Tạm tính món:</span><b>${money(total)}</b></div>
+  </div>`;
+}
+
 function toast(message,type="ok"){ const el=$("#toast"); el.textContent=message; el.className=`toast show ${type}`; clearTimeout(toast.timer); toast.timer=setTimeout(()=>el.classList.remove("show"),2600); }
 function statusName(s){ return {new:"Mới",processing:"Đang xử lý",confirmed:"Đã xác nhận",done:"Hoàn thành",cancelled:"Đã hủy",free:"Trống",reserved:"Đã đặt",pending:"Chờ xác nhận",using:"Đang dùng",cleaning:"Đang dọn",locked:"Khoá"}[s] || s || "Mới"; }
 function categoryName(c){ return {main:"Món chính",drink:"Đồ uống",snack:"Ăn vặt",dessert:"Tráng miệng"}[c] || c || "Khác"; }
