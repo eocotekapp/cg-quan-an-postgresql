@@ -557,7 +557,13 @@ function fillSettingsForm(){ const f=$("#settingsForm"); if(!f) return; f.shopNa
 function bindActions(){
   $$(".action-btn[data-type]").forEach(btn=>btn.onclick=()=>{
     const label=statusName(btn.dataset.status);
-    confirmJob=async()=>{ await api("/api/status",{method:"POST",body:JSON.stringify({type:btn.dataset.type,id:btn.dataset.id,status:btn.dataset.status})}); toast(`Đã cập nhật: ${label}`); loadDashboard(); };
+    confirmJob = async () => {
+      const payload = { type: btn.dataset.type, id: btn.dataset.id, status: btn.dataset.status };
+      if (!payload.type || !payload.id || !payload.status) throw new Error("Thiếu dữ liệu nút xác nhận");
+      await api("/api/status", { method: "POST", body: JSON.stringify(payload) });
+      toast(`Đã cập nhật: ${label}`);
+      await loadDashboard();
+    };
     $("#confirmTitle").textContent="Xác nhận cập nhật"; $("#confirmMessage").textContent=`Chuyển trạng thái sang “${label}”?`; $("#confirmModal").classList.add("show");
   });
 }
@@ -749,7 +755,22 @@ $("#settingsForm").addEventListener("submit",async e=>{ e.preventDefault(); cons
 $("#archiveRunBtn").addEventListener("click",async()=>{ const year=$("#archiveYearInput").value||new Date().getFullYear(); const action=$("#archiveAction").value; try{ if(action==="view"){ const data=await api(`/api/archive?year=${encodeURIComponent(year)}`); $("#archiveResult").innerHTML=`Doanh thu năm ${year}: <b>${money(data.summary.revenue)}</b><br>Đơn ship: ${data.summary.shipOrders} • Đơn bàn: ${data.summary.tableOrders} • Huỷ: ${data.summary.cancelled}`; return; } if(action==="deleteYearRevenue" && String(year)===String(new Date().getFullYear())) return toast("Không được xoá năm hiện tại","error"); if(action==="deleteYearRevenue" && !confirm(`Xoá doanh thu năm ${year}? Không thể hoàn tác.`)) return; const data=await api("/api/archive",{method:"POST",body:JSON.stringify({action,year})}); toast(action==="closeYear"?"Đã chốt năm":"Đã xoá doanh thu năm cũ"); if(data.summary) $("#archiveResult").innerHTML=`Đã chốt năm ${year}: ${money(data.summary.revenue)}`; }catch(err){ toast(err.message,"error"); } });
 
 $("#confirmCancelBtn").addEventListener("click",()=>{ $("#confirmModal").classList.remove("show"); confirmJob=null; });
-$("#confirmOkBtn").addEventListener("click",async()=>{ $("#confirmModal").classList.remove("show"); const job=confirmJob; confirmJob=null; if(job) await job(); });
+$("#confirmOkBtn").addEventListener("click", async () => {
+  const btn = $("#confirmOkBtn");
+  $("#confirmModal").classList.remove("show");
+  const job = confirmJob;
+  confirmJob = null;
+  if (!job) return;
+  try {
+    if (btn) { btn.disabled = true; btn.dataset.oldText = btn.textContent; btn.textContent = "Đang xử lý..."; }
+    await job();
+  } catch (err) {
+    console.error("Confirm action failed:", err);
+    toast(err.message || "Không xác nhận được đơn", "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = btn.dataset.oldText || "Đồng ý"; }
+  }
+});
 
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden && pin) loadDashboard(); });
 
