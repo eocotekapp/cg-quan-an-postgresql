@@ -125,7 +125,7 @@ function renderAppOrderCard(item){
   const secondLine = isBooking
     ? `👥 Bàn ${escapeHtml(item.table || "")} • ${escapeHtml(item.guests || "")} người`
     : `💰 ${money(item.total || 0)}${item.shippingFee ? " • Ship: " + money(item.shippingFee) : ""}`;
-  const badge = status === "new" ? "MỚI" : getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(item.status);
+  const badge = status === "new" ? "MỚI" : getStatusLabel(item.status);
 
   return `<article class="app-order-card ${isBooking ? "booking-card" : "ship-card"}">
     <div class="app-order-head">
@@ -205,7 +205,7 @@ function setStatusFilter(status){
   currentStatusFilter = status || "new";
   $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
   showPanel("dashboard");
-  loadDashboard(); bindActions(); bindActions();}
+  loadDashboard(); bindActions();}
 
 
 function isOrderConfirmedStatus(s){
@@ -247,7 +247,7 @@ function renderMiniOrderCard(item){
     ? `${escapeHtml(item.date || "")} • ${escapeHtml(item.time || "")}`
     : `${money(item.total || 0)}${item.shippingFee ? " • Ship: " + money(item.shippingFee) : ""}`;
   const icon = isBooking ? "🪑" : "🚚";
-  const statusBadge = status === "new" ? "MỚI" : getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(item.status);
+  const statusBadge = status === "new" ? "MỚI" : getStatusLabel(item.status);
 
   return `<article class="admin-card dashboard-order-card ${isBooking ? "booking-card" : "ship-card"}">
     <div class="dash-order-top">
@@ -301,7 +301,7 @@ function showDashboard(){
   $("#pinScreen").classList.add("hidden");
   $("#dashboard").classList.remove("hidden");
   setDefaultDateTime();
-  loadDashboard(); bindActions(); bindActions();startAutoRefresh();
+  loadDashboard(); bindActions();startAutoRefresh();
 }
 function showPin(){
   $("#dashboard").classList.add("hidden");
@@ -395,7 +395,7 @@ function renderOrders(items){
     return `<article class="admin-card compact-card">
       <div class="compact-main">
         <div><div class="admin-code">${escapeHtml(order.orderCode||order.id)}</div><p><b>${escapeHtml(order.customer?.name||"")}</b> • ${escapeHtml(order.customer?.phone||"")}</p><p class="muted">${lines}</p></div>
-        <div><span class="status status-${escapeHtml(order.status||"new")}">${getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(order.status)}</span><b class="compact-money">${money(order.total)}</b></div>
+        <div><span class="status status-${escapeHtml(order.status||"new")}">${getStatusLabel(order.status)}</span><b class="compact-money">${money(order.total)}</b></div>
       </div>
       <p class="muted">${escapeHtml(order.customer?.address||"")} — Ship: ${money(order.shippingFee||0)} — ${escapeHtml(order.customer?.note||"Không ghi chú")}</p>
       ${itemsBox}
@@ -443,7 +443,7 @@ function renderBookings(items){
         <div><span>Giờ đặt</span><b>${escapeHtml(b.date||"")} ${escapeHtml(b.time||"")}</b><small>${b.lockStartText && b.lockEndText ? `Khóa: ${escapeHtml(b.lockStartText)} → ${escapeHtml(b.lockEndText)}` : "Chưa khóa bàn"}</small></div>
         <div><span>Số người</span><b>${escapeHtml(b.guests||"")}</b></div>
         <div><span>Bàn</span><b>${escapeHtml(b.table||"")}</b></div>
-        <div><span>Trạng thái</span><b class="status status-${escapeHtml(b.status||"new")}">${sessionIsClosed ? "Đã thanh toán / đóng phiên" : getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(b.status)}</b></div>
+        <div><span>Trạng thái</span><b class="status status-${escapeHtml(b.status||"new")}">${sessionIsClosed ? "Đã thanh toán / đóng phiên" : getStatusLabel(b.status)}</b></div>
       </div>
       <p class="muted"><b>Ghi chú:</b> ${escapeHtml(b.note||"Không có")}</p>
       ${preorderBox}
@@ -469,7 +469,7 @@ function renderTables(items){
     node.classList.add(`table-${status}`);
     node.onclick=()=>openTableForm(t||{id:node.dataset.adminTable,name:node.dataset.adminTable,seats:4,status:"free",locked:false});
   });
-  $("#tableDetail").innerHTML=items.map(t=>`<div class="table-mini-row"><b>${escapeHtml(t.id)}</b><span>${getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(t.locked?"locked":t.status)}</span><small>${escapeHtml(t.zone||"")}</small></div>`).join("");
+  $("#tableDetail").innerHTML=items.map(t=>`<div class="table-mini-row"><b>${escapeHtml(t.id)}</b><span>${getStatusLabel(t.locked?"locked":t.status)}</span><small>${escapeHtml(t.zone||"")}</small></div>`).join("");
 }
 function renderSessions(items){
   const open=items.filter(s=>s.status==="open");
@@ -615,28 +615,28 @@ function fillSettingsForm(){ const f=$("#settingsForm"); if(!f) return; f.shopNa
 
 function bindActions(){
   $$(".action-btn[data-type]").forEach(btn=>btn.onclick=()=>{
-    const label=getStatusLabel(btn?.dataset?.status, btn?.textContent?.trim?.())(btn.dataset.status);
+    const label = getStatusLabel(btn.dataset.status, btn.textContent.trim());
     confirmJob = async () => {
       const payload = { type: btn.dataset.type, id: btn.dataset.id, status: btn.dataset.status };
       if (!payload.type || !payload.id || !payload.status) throw new Error("Thiếu dữ liệu nút xác nhận");
       await api("/api/status", { method: "POST", body: JSON.stringify(payload) });
       toast(`Đã cập nhật: ${label}`);
-      await loadDashboard(); bindActions(); bindActions(); bindActions();};
+      await loadDashboard(); bindActions();};
     $("#confirmTitle").textContent="Xác nhận cập nhật"; $("#confirmMessage").textContent=`Chuyển trạng thái sang “${label}”?`; $("#confirmModal").classList.add("show");
   });
 }
 function bindDeleteActions(){
-  $$("[data-delete-order]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/orders?id=${encodeURIComponent(btn.dataset.deleteOrder)}`,{method:"DELETE"}); toast("Đã xoá đơn"); loadDashboard(); bindActions(); bindActions();}; $("#confirmTitle").textContent="Xoá hẳn đơn"; $("#confirmMessage").textContent="Không thể hoàn tác."; $("#confirmModal").classList.add("show"); });
-  $$("[data-delete-booking]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/bookings?id=${encodeURIComponent(btn.dataset.deleteBooking)}`,{method:"DELETE"}); toast("Đã xoá lịch đặt bàn"); loadDashboard(); bindActions(); bindActions();}; $("#confirmTitle").textContent="Xoá hẳn đặt bàn"; $("#confirmMessage").textContent="Không thể hoàn tác."; $("#confirmModal").classList.add("show"); });
+  $$("[data-delete-order]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/orders?id=${encodeURIComponent(btn.dataset.deleteOrder)}`,{method:"DELETE"}); toast("Đã xoá đơn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá hẳn đơn"; $("#confirmMessage").textContent="Không thể hoàn tác."; $("#confirmModal").classList.add("show"); });
+  $$("[data-delete-booking]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/bookings?id=${encodeURIComponent(btn.dataset.deleteBooking)}`,{method:"DELETE"}); toast("Đã xoá lịch đặt bàn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá hẳn đặt bàn"; $("#confirmMessage").textContent="Không thể hoàn tác."; $("#confirmModal").classList.add("show"); });
 }
 function bindShipActions(){ $$("[data-ship-edit]").forEach(btn=>btn.onclick=()=>{ $("#shipForm").reset(); $("#shipOrderId").value=btn.dataset.shipEdit; $("#shipForm").shippingFee.value=btn.dataset.fee||0; $("#shipModal").classList.add("show"); }); }
 function bindMenuActions(items){
   $$("[data-menu-edit]").forEach(btn=>btn.onclick=()=>openMenuForm(items.find(x=>String(x.id)===String(btn.dataset.menuEdit))));
-  $$("[data-menu-delete]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/menu?id=${encodeURIComponent(btn.dataset.menuDelete)}`,{method:"DELETE"}); toast("Đã xoá món"); loadDashboard(); bindActions(); bindActions();}; $("#confirmTitle").textContent="Xoá món"; $("#confirmMessage").textContent="Bạn chắc chắn muốn xoá món?"; $("#confirmModal").classList.add("show"); });
+  $$("[data-menu-delete]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/menu?id=${encodeURIComponent(btn.dataset.menuDelete)}`,{method:"DELETE"}); toast("Đã xoá món"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá món"; $("#confirmMessage").textContent="Bạn chắc chắn muốn xoá món?"; $("#confirmModal").classList.add("show"); });
 }
 function bindInventoryActions(items){
   $$("[data-inv-edit]").forEach(btn=>btn.onclick=()=>openInventoryForm(items.find(x=>String(x.id)===String(btn.dataset.invEdit))));
-  $$("[data-inv-delete]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/inventory?id=${encodeURIComponent(btn.dataset.invDelete)}`,{method:"DELETE"}); toast("Đã xoá nguyên liệu"); loadDashboard(); bindActions(); bindActions();}; $("#confirmTitle").textContent="Xoá nguyên liệu"; $("#confirmMessage").textContent="Bạn chắc chắn?"; $("#confirmModal").classList.add("show"); });
+  $$("[data-inv-delete]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/inventory?id=${encodeURIComponent(btn.dataset.invDelete)}`,{method:"DELETE"}); toast("Đã xoá nguyên liệu"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá nguyên liệu"; $("#confirmMessage").textContent="Bạn chắc chắn?"; $("#confirmModal").classList.add("show"); });
 }
 function ensureSessionMenuModal(){
   if ($("#sessionMenuModal")) return;
@@ -751,12 +751,12 @@ async function submitSessionAddItems(e){
     });
     $("#sessionMenuModal").classList.remove("show");
     toast(`Đã gộp món vào phiên ${result.sessionCode}`);
-    loadDashboard(); bindActions(); bindActions();}catch(err){ toast(err.message,"error"); }
+    loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); }
 }
 
 function bindSessionActions(){
   $$("[data-session-add-items]").forEach(btn=>btn.onclick=()=>openSessionMenuModal(btn.dataset.sessionAddItems, btn.dataset.sessionTable || ""));
-  $$("[data-session-close]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"close",id:btn.dataset.sessionClose})}); toast("Đã thanh toán phiên bàn"); loadDashboard(); bindActions(); bindActions();}; $("#confirmTitle").textContent="Thanh toán phiên bàn"; $("#confirmMessage").textContent="Thanh toán, đóng phiên bàn và khóa thêm món cho đơn này?"; $("#confirmModal").classList.add("show"); });
+  $$("[data-session-close]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"close",id:btn.dataset.sessionClose})}); toast("Đã thanh toán phiên bàn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Thanh toán phiên bàn"; $("#confirmMessage").textContent="Thanh toán, đóng phiên bàn và khóa thêm món cho đơn này?"; $("#confirmModal").classList.add("show"); });
   $$("[data-session-move]").forEach(btn=>btn.onclick=()=>{ $("#moveSessionForm").reset(); $("#moveSessionId").value=btn.dataset.sessionMove; $("#moveSessionModal").classList.add("show"); });
 }
 
@@ -772,14 +772,14 @@ $$(".view-mode").forEach(btn=>btn.addEventListener("click",()=>{
   currentKindFilter = btn.dataset.kindFilter || "all";
   $$(".view-mode").forEach(x=>x.classList.toggle("active", x.dataset.kindFilter === currentKindFilter));
   showPanel("dashboard");
-  loadDashboard(); bindActions(); bindActions();}));
+  loadDashboard(); bindActions();}));
 $$("[data-jump-status]").forEach(card=>card.addEventListener("click",()=>{
   currentStatusFilter = card.dataset.jumpStatus || "new";
   currentKindFilter = card.dataset.jumpKind || "all";
   $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
   $$(".view-mode").forEach(x=>x.classList.toggle("active", x.dataset.kindFilter === currentKindFilter));
   showPanel("dashboard");
-  loadDashboard(); bindActions(); bindActions();}));
+  loadDashboard(); bindActions();}));
 
 $$(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>showPanel(btn.dataset.tab || "dashboard")));
 $$(".range-btn").forEach(btn=>btn.addEventListener("click",()=>{ $$(".range-btn").forEach(x=>x.classList.remove("active")); btn.classList.add("active"); loadAnalytics(btn.dataset.range); }));
@@ -787,24 +787,24 @@ $("#tableDateFilter")?.addEventListener("change",loadDashboard); $("#tableTimeFi
 
 $("#addMenuBtn").addEventListener("click",()=>openMenuForm());
 $("#menuCancelBtn").addEventListener("click",()=>$("#menuModal").classList.remove("show"));
-$("#menuForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.originalPrice=Number(data.originalPrice||0); data.price=Number(data.price||0); data.popular=Number(data.popular||0); data.imageZoom=Number(data.imageZoom||100); data.imagePosX=Number(data.imagePosX??50); data.imagePosY=Number(data.imagePosY??50); data.available=data.available==="true"; try{ await api("/api/menu",{method:"POST",body:JSON.stringify(data)}); $("#menuModal").classList.remove("show"); toast("Đã lưu món"); loadDashboard(); bindActions(); bindActions();}catch(err){ toast(err.message,"error"); } });
+$("#menuForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.originalPrice=Number(data.originalPrice||0); data.price=Number(data.price||0); data.popular=Number(data.popular||0); data.imageZoom=Number(data.imageZoom||100); data.imagePosX=Number(data.imagePosX??50); data.imagePosY=Number(data.imagePosY??50); data.available=data.available==="true"; try{ await api("/api/menu",{method:"POST",body:JSON.stringify(data)}); $("#menuModal").classList.remove("show"); toast("Đã lưu món"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
 $("#menuForm").imageUrl.addEventListener("input", updateCropPreview); $("#menuForm").imageFit.addEventListener("change", updateCropPreview); $("#cropZoom").addEventListener("input", updateCropPreview); $("#cropX").addEventListener("input", updateCropPreview); $("#cropY").addEventListener("input", updateCropPreview); $("#cropResetBtn").addEventListener("click", resetCropPreview);
 
 $("#addInventoryBtn").addEventListener("click",()=>openInventoryForm());
 $("#inventoryCancelBtn").addEventListener("click",()=>$("#inventoryModal").classList.remove("show"));
-$("#inventoryForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); ["stock","minStock","lastImportQty","lastImportPrice"].forEach(k=>data[k]=Number(data[k]||0)); try{ await api("/api/inventory",{method:"POST",body:JSON.stringify(data)}); $("#inventoryModal").classList.remove("show"); toast("Đã lưu nguyên liệu"); loadDashboard(); bindActions(); bindActions();}catch(err){ toast(err.message,"error"); } });
+$("#inventoryForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); ["stock","minStock","lastImportQty","lastImportPrice"].forEach(k=>data[k]=Number(data[k]||0)); try{ await api("/api/inventory",{method:"POST",body:JSON.stringify(data)}); $("#inventoryModal").classList.remove("show"); toast("Đã lưu nguyên liệu"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
 
 $("#tableCancelBtn").addEventListener("click",()=>$("#tableModal").classList.remove("show"));
-$("#tableForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.seats=Number(data.seats||4); data.locked=data.locked==="true"||data.status==="locked"; try{ await api("/api/tables",{method:"POST",body:JSON.stringify(data)}); $("#tableModal").classList.remove("show"); toast("Đã lưu bàn"); loadDashboard(); bindActions(); bindActions();}catch(err){ toast(err.message,"error"); } });
+$("#tableForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.seats=Number(data.seats||4); data.locked=data.locked==="true"||data.status==="locked"; try{ await api("/api/tables",{method:"POST",body:JSON.stringify(data)}); $("#tableModal").classList.remove("show"); toast("Đã lưu bàn"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
 
 $("#openSessionBtn").addEventListener("click",()=>$("#sessionModal").classList.add("show"));
 $("#sessionCancelBtn").addEventListener("click",()=>$("#sessionModal").classList.remove("show"));
-$("#sessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.action="open"; data.table=String(data.table||"").toUpperCase().trim(); data.guests=Number(data.guests||1); try{ await api("/api/sessions",{method:"POST",body:JSON.stringify(data)}); $("#sessionModal").classList.remove("show"); toast("Đã mở phiên bàn"); loadDashboard(); bindActions(); bindActions();}catch(err){ toast(err.message,"error"); } });
+$("#sessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.action="open"; data.table=String(data.table||"").toUpperCase().trim(); data.guests=Number(data.guests||1); try{ await api("/api/sessions",{method:"POST",body:JSON.stringify(data)}); $("#sessionModal").classList.remove("show"); toast("Đã mở phiên bàn"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
 $("#moveSessionCancelBtn").addEventListener("click",()=>$("#moveSessionModal").classList.remove("show"));
-$("#moveSessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); try{ if(data.toTable) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"move",id:data.id,toTable:String(data.toTable).toUpperCase().trim()})}); if(data.mergeTables) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"merge",id:data.id,tables:String(data.mergeTables).toUpperCase()})}); $("#moveSessionModal").classList.remove("show"); toast("Đã cập nhật phiên bàn"); loadDashboard(); bindActions(); bindActions();}catch(err){ toast(err.message,"error"); } });
+$("#moveSessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); try{ if(data.toTable) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"move",id:data.id,toTable:String(data.toTable).toUpperCase().trim()})}); if(data.mergeTables) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"merge",id:data.id,tables:String(data.mergeTables).toUpperCase()})}); $("#moveSessionModal").classList.remove("show"); toast("Đã cập nhật phiên bàn"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
 
 $("#shipCancelBtn").addEventListener("click",()=>$("#shipModal").classList.remove("show"));
-$("#shipForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.id=$("#shipOrderId").value; data.shippingFee=Number(data.shippingFee||0); try{ await api("/api/orders",{method:"PUT",body:JSON.stringify(data)}); $("#shipModal").classList.remove("show"); toast("Đã cập nhật phí ship"); loadDashboard(); bindActions(); bindActions();}catch(err){ toast(err.message,"error"); } });
+$("#shipForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.id=$("#shipOrderId").value; data.shippingFee=Number(data.shippingFee||0); try{ await api("/api/orders",{method:"PUT",body:JSON.stringify(data)}); $("#shipModal").classList.remove("show"); toast("Đã cập nhật phí ship"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
 
 $("#settingsForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.shippingFee=Number(data.shippingFee||0); data.freeShipFrom=Number(data.freeShipFrom||0); try{ const result=await api("/api/settings",{method:"POST",body:JSON.stringify(data)}); settingsCache=result.settings||data; toast("Đã lưu cài đặt"); }catch(err){ toast(err.message,"error"); } });
 $("#archiveRunBtn").addEventListener("click",async()=>{ const year=$("#archiveYearInput").value||new Date().getFullYear(); const action=$("#archiveAction").value; try{ if(action==="view"){ const data=await api(`/api/archive?year=${encodeURIComponent(year)}`); $("#archiveResult").innerHTML=`Doanh thu năm ${year}: <b>${money(data.summary.revenue)}</b><br>Đơn ship: ${data.summary.shipOrders} • Đơn bàn: ${data.summary.tableOrders} • Huỷ: ${data.summary.cancelled}`; return; } if(action==="deleteYearRevenue" && String(year)===String(new Date().getFullYear())) return toast("Không được xoá năm hiện tại","error"); if(action==="deleteYearRevenue" && !confirm(`Xoá doanh thu năm ${year}? Không thể hoàn tác.`)) return; const data=await api("/api/archive",{method:"POST",body:JSON.stringify({action,year})}); toast(action==="closeYear"?"Đã chốt năm":"Đã xoá doanh thu năm cũ"); if(data.summary) $("#archiveResult").innerHTML=`Đã chốt năm ${year}: ${money(data.summary.revenue)}`; }catch(err){ toast(err.message,"error"); } });
@@ -827,7 +827,7 @@ $("#confirmOkBtn").addEventListener("click", async () => {
   }
 });
 
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden && pin) loadDashboard(); bindActions(); bindActions();});
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && pin) loadDashboard(); bindActions();});
 
 if(pin) showDashboard(); else showPin();
 
