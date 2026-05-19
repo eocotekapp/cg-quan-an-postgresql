@@ -33,28 +33,6 @@ async function api(path, options = {}) {
   return data;
 }
 function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
-
-
-function renderAdminNumberedItems(items, title = "Món trong đơn") {
-  const list = Array.isArray(items) ? items.filter(Boolean) : [];
-  if (!list.length) return "";
-  const total = list.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 1), 0);
-  return `<div class="admin-order-items numbered-order-items">
-    <div class="admin-order-items-title">🍽️ ${escapeHtml(title)} <span>(${list.length} món)</span></div>
-    <div class="admin-order-items-list">
-      ${list.map((item, index) => `
-        <div class="admin-order-item-row">
-          <span class="admin-order-item-index">${index + 1}</span>
-          <span class="admin-order-item-name">${escapeHtml(item.name || item.title || "Món")}</span>
-          <span class="admin-order-item-qty">x${Number(item.qty || 1)}</span>
-          <span class="admin-order-item-price">${money(Number(item.price || 0) * Number(item.qty || 1))}</span>
-        </div>
-      `).join("")}
-    </div>
-    <div class="admin-order-items-total"><span>Tạm tính món:</span><b>${money(total)}</b></div>
-  </div>`;
-}
-
 function toast(message,type="ok"){ const el=$("#toast"); el.textContent=message; el.className=`toast show ${type}`; clearTimeout(toast.timer); toast.timer=setTimeout(()=>el.classList.remove("show"),2600); }
 function statusName(s){ return {new:"Mới",processing:"Đang xử lý",confirmed:"Đã xác nhận",done:"Hoàn thành",cancelled:"Đã hủy",free:"Trống",reserved:"Đã đặt",pending:"Chờ xác nhận",using:"Đang dùng",cleaning:"Đang dọn",locked:"Khoá"}[s] || s || "Mới"; }
 function categoryName(c){ return {main:"Món chính",drink:"Đồ uống",snack:"Ăn vặt",dessert:"Tráng miệng"}[c] || c || "Khác"; }
@@ -98,8 +76,9 @@ function renderDashboardItemsBox(item){
     ${
       items.length
       ? `<div class="dash-items-list">
-          ${items.map(x => `
-            <p>
+          ${items.map((x, index) => `
+            <p class="numbered-item-line">
+              <i class="item-no">${index + 1}</i>
               <span>${escapeHtml(x.name || "Món")}</span>
               <em>x${Number(x.qty || 1)}</em>
               <strong>${money(Number(x.price || 0) * Number(x.qty || 1))}</strong>
@@ -379,13 +358,28 @@ async function loadDashboard(){
 function renderOrders(items){
   const visible = items.filter(order => order.status !== "done" && order.status !== "cancelled");
   $("#ordersList").innerHTML = visible.length ? visible.map(order=>{
-    const lines=(order.items||[]).map(i=>`${escapeHtml(i.name)} x${i.qty}`).join(", ");
+    const orderItems = Array.isArray(order.items) ? order.items : [];
+    const lines=orderItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ");
+    const itemsTotal = orderItems.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0);
+    const itemsBox = orderItems.length ? `<div class="admin-numbered-items-box">
+      <div class="numbered-items-title">🍽️ Món trong đơn <span>(${orderItems.reduce((sum,i)=>sum+Number(i.qty||1),0)} món)</span></div>
+      <div class="numbered-items-list">
+        ${orderItems.map((i,index)=>`<div class="numbered-items-row">
+          <b class="item-no">${index+1}</b>
+          <span class="item-name">${escapeHtml(i.name||"Món")}</span>
+          <em class="item-qty">x${Number(i.qty||1)}</em>
+          <strong class="item-price">${money(Number(i.price||0)*Number(i.qty||1))}</strong>
+        </div>`).join("")}
+      </div>
+      <div class="numbered-items-total"><span>Tạm tính món:</span><b>${money(itemsTotal)}</b></div>
+    </div>` : "";
     return `<article class="admin-card compact-card">
       <div class="compact-main">
         <div><div class="admin-code">${escapeHtml(order.orderCode||order.id)}</div><p><b>${escapeHtml(order.customer?.name||"")}</b> • ${escapeHtml(order.customer?.phone||"")}</p><p class="muted">${lines}</p></div>
         <div><span class="status status-${escapeHtml(order.status||"new")}">${statusName(order.status)}</span><b class="compact-money">${money(order.total)}</b></div>
       </div>
       <p class="muted">${escapeHtml(order.customer?.address||"")} — Ship: ${money(order.shippingFee||0)} — ${escapeHtml(order.customer?.note||"Không ghi chú")}</p>
+      ${itemsBox}
       <div class="admin-actions">
         <button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="processing">Đang xử lý</button>
         <button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="done">Hoàn thành</button>
@@ -400,8 +394,21 @@ function renderOrders(items){
 function renderBookings(items){
   const visible = items.filter(b => b.status !== "done" && b.status !== "cancelled");
   $("#bookingsList").innerHTML = visible.length ? visible.map(b=>{
-    const preTotal = b.preorderSubtotal || (b.preorderItems||[]).reduce((s,i)=>s+Number(i.price||0)*Number(i.qty||1),0);
-    const preText = (b.preorderItems||[]).length ? (b.preorderItems||[]).map(i=>`${escapeHtml(i.name)} x${i.qty}`).join(", ") + ` • ${money(preTotal)}` : "Không có";
+    const preorderItems = Array.isArray(b.preorderItems) ? b.preorderItems : [];
+    const preTotal = b.preorderSubtotal || preorderItems.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0);
+    const preText = preorderItems.length ? preorderItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ") + ` • ${money(preTotal)}` : "Không có";
+    const preorderBox = preorderItems.length ? `<div class="admin-numbered-items-box">
+      <div class="numbered-items-title">🍽️ Món đặt trước <span>(${preorderItems.reduce((sum,i)=>sum+Number(i.qty||1),0)} món)</span></div>
+      <div class="numbered-items-list">
+        ${preorderItems.map((i,index)=>`<div class="numbered-items-row">
+          <b class="item-no">${index+1}</b>
+          <span class="item-name">${escapeHtml(i.name||"Món")}</span>
+          <em class="item-qty">x${Number(i.qty||1)}</em>
+          <strong class="item-price">${money(Number(i.price||0)*Number(i.qty||1))}</strong>
+        </div>`).join("")}
+      </div>
+      <div class="numbered-items-total"><span>Tạm tính món:</span><b>${money(preTotal)}</b></div>
+    </div>` : `<div class="admin-numbered-items-box empty"><div class="numbered-items-title">🍽️ Món đặt trước</div><p class="muted">Không có món đặt kèm.</p></div>`;
     const session = b.sessionId ? sessionCache.find(s=>String(s.id)===String(b.sessionId)) : null;
     const sessionStatus = session?.status || "";
     const sessionIsOpen = !!session && sessionStatus === "open" && b.status !== "done" && b.status !== "cancelled";
@@ -420,7 +427,7 @@ function renderBookings(items){
         <div><span>Trạng thái</span><b class="status status-${escapeHtml(b.status||"new")}">${sessionIsClosed ? "Đã thanh toán / đóng phiên" : statusName(b.status)}</b></div>
       </div>
       <p class="muted"><b>Ghi chú:</b> ${escapeHtml(b.note||"Không có")}</p>
-      <p class="muted"><b>Món đặt trước:</b> ${preText}</p>
+      ${preorderBox}
       ${b.sessionId ? `<p class="muted"><b>Phiên bàn:</b> ${escapeHtml(b.sessionCode || b.sessionId)} ${sessionTotal ? `• Tổng hiện tại: <b>${sessionTotal}</b>` : ""} ${sessionStatus ? `• Trạng thái phiên: <b>${sessionStatus === "open" ? "Đang mở" : "Đã đóng"}</b>` : ""}</p>` : ""}
       <div class="admin-actions">
         ${canConfirm ? `<button class="action-btn action-confirm" data-type="bookings" data-id="${escapeHtml(b.id)}" data-status="confirmed">Xác nhận & tạo phiên bàn</button>` : ""}
@@ -448,7 +455,17 @@ function renderTables(items){
 function renderSessions(items){
   const open=items.filter(s=>s.status==="open");
   $("#sessionsList").innerHTML=open.length ? open.map(s=>{
-    const summary=(s.summaryItems||[]).map(i=>`${escapeHtml(i.name)} x${i.qty}`).join(", ");
+    const sessionItems = Array.isArray(s.summaryItems) ? s.summaryItems : [];
+    const summary=sessionItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ");
+    const sessionItemsBox = sessionItems.length ? `<div class="admin-numbered-items-box compact">
+      <div class="numbered-items-title">🍽️ Món trong phiên <span>(${sessionItems.reduce((sum,i)=>sum+Number(i.qty||1),0)} món)</span></div>
+      ${sessionItems.map((i,index)=>`<div class="numbered-items-row">
+        <b class="item-no">${index+1}</b>
+        <span class="item-name">${escapeHtml(i.name||"Món")}</span>
+        <em class="item-qty">x${Number(i.qty||1)}</em>
+        <strong class="item-price">${money(Number(i.price||0)*Number(i.qty||1))}</strong>
+      </div>`).join("")}
+    </div>` : "";
     const preorder = Number(s.preorderTotal || 0);
     const extra = Number(s.extraTotal || 0);
     return `<article class="admin-card compact-card">
@@ -457,6 +474,7 @@ function renderSessions(items){
           <div class="admin-code">${escapeHtml(s.sessionCode || s.id)}</div>
           <p><b>Bàn ${escapeHtml((s.tables||[]).join("+"))}</b> • ${escapeHtml(s.customerName||"Khách tại bàn")}</p>
           <p class="muted">${summary || "Chưa gọi món"}</p>
+          ${sessionItemsBox}
           <p class="muted">Đặt trước: <b>${money(preorder)}</b> • Gọi thêm: <b>${money(extra)}</b></p>
         </div>
         <div><span class="status status-processing">Đang dùng</span><b class="compact-money">${money(s.total||0)}</b></div>

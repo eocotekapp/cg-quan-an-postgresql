@@ -1672,8 +1672,9 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
 }
 
 
-/* ===== v8: numbered order items for admin cards ===== */
-.admin-order-items {
+/* ===== v9: real numbered items in admin order cards ===== */
+.admin-numbered-items-box,
+.dash-items-box {
   margin-top: 12px;
   padding: 10px;
   border-radius: 16px;
@@ -1682,35 +1683,43 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.025);
 }
 
-.admin-order-items-title {
+.admin-numbered-items-box.empty {
+  background: rgba(255,255,255,.045);
+  border-color: rgba(255,255,255,.12);
+}
+
+.numbered-items-title,
+.dash-items-title {
   color: #ffe08a !important;
-  font-weight: 900;
+  font-weight: 950;
   margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
-.admin-order-items-title span {
-  color: rgba(255,255,255,.72) !important;
-  font-size: 12px;
-  font-weight: 800;
+.numbered-items-title span,
+.dash-items-title span {
+  color: #ffe08a !important;
+  opacity: 1 !important;
 }
 
-.admin-order-item-row {
+.numbered-items-row,
+.dash-items-list p.numbered-item-line {
   display: grid;
   grid-template-columns: 26px 1fr auto auto;
   gap: 8px;
   align-items: center;
   padding: 8px 0;
   border-bottom: 1px dashed rgba(255,255,255,.12);
+  color: rgba(255,255,255,.92) !important;
 }
 
-.admin-order-item-row:last-child {
+.numbered-items-row:last-child,
+.dash-items-list p.numbered-item-line:last-child {
   border-bottom: 0;
 }
 
-.admin-order-item-index {
+.item-no,
+.numbered-items-row .item-no,
+.dash-items-list .item-no {
   width: 24px;
   min-width: 24px;
   height: 24px;
@@ -1718,36 +1727,45 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 214, 120, .16);
+  background: rgba(255, 214, 120, .18);
   color: #ffe08a !important;
-  border: 1px solid rgba(255, 214, 120, .28);
+  border: 1px solid rgba(255, 214, 120, .34);
   font-weight: 950;
+  font-style: normal;
   font-size: 13px;
 }
 
-.admin-order-item-name {
+.item-name,
+.numbered-items-row .item-name,
+.dash-items-list p.numbered-item-line span {
   color: #fff !important;
-  font-weight: 800;
+  font-weight: 850;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.admin-order-item-qty {
+.item-qty,
+.numbered-items-row .item-qty,
+.dash-items-list p.numbered-item-line em {
   color: #9dffb0 !important;
-  font-weight: 900;
+  font-weight: 950;
+  font-style: normal;
   background: rgba(85, 255, 130, .10);
   border: 1px solid rgba(85, 255, 130, .22);
   border-radius: 999px;
   padding: 2px 8px;
 }
 
-.admin-order-item-price {
+.item-price,
+.numbered-items-row .item-price,
+.dash-items-list p.numbered-item-line strong {
   color: #ffe08a !important;
   font-weight: 950;
   white-space: nowrap;
 }
 
-.admin-order-items-total {
+.numbered-items-total,
+.dash-items-total {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid rgba(255,255,255,.12);
@@ -1755,47 +1773,11 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
   justify-content: space-between;
   gap: 8px;
   color: rgba(255,255,255,.86) !important;
-  font-weight: 800;
+  font-weight: 850;
 }
 
-.admin-order-items-total b {
+.numbered-items-total b,
+.dash-items-total strong {
   color: #ffe08a !important;
   font-weight: 950;
-}
-
-/* CSS fallback: nếu file đang dùng item-row cũ thì tự đánh số thứ tự */
-.dash-items-box,
-.app-order-items-box,
-.order-items-box,
-.preorder-items-box,
-.card-items-box {
-  counter-reset: adminItemNo;
-}
-
-.dash-items-box .item-row,
-.app-order-items-box .item-row,
-.order-items-box .item-row,
-.preorder-items-box .item-row,
-.card-items-box .item-row {
-  counter-increment: adminItemNo;
-}
-
-.dash-items-box .item-row::before,
-.app-order-items-box .item-row::before,
-.order-items-box .item-row::before,
-.preorder-items-box .item-row::before,
-.card-items-box .item-row::before {
-  content: counter(adminItemNo);
-  width: 22px;
-  height: 22px;
-  min-width: 22px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 214, 120, .16);
-  color: #ffe08a;
-  border: 1px solid rgba(255, 214, 120, .28);
-  font-weight: 950;
-  margin-right: 6px;
 }
