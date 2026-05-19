@@ -1,3 +1,12 @@
+function cgApiUrl(path){
+  const base = (window.CG_API_BASE_URL || localStorage.getItem("CG_API_BASE_URL") || "").replace(/\/$/, "");
+  const p = String(path || "");
+  return p.startsWith("/api/") ? base + p : p;
+}
+function cgFetch(path, options){
+  return fetch(cgApiUrl(path), options);
+}
+
 const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const money = n => new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + "đ";
@@ -18,7 +27,7 @@ let lastBookingCount = 0;
 let firstLoadDone = false;
 
 async function api(path, options = {}) {
-  const res = await fetch(path, { headers: { "Content-Type":"application/json", "x-admin-pin": pin }, ...options });
+  const res = await cgFetch(path, { headers: { "Content-Type":"application/json", "x-admin-pin": pin }, ...options });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.ok === false) throw new Error(data.error || "Có lỗi xảy ra");
   return data;
