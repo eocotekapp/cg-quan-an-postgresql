@@ -1781,3 +1781,37 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
   color: #ffe08a !important;
   font-weight: 950;
 }
+
+
+/* ===== v10: toast must never block bottom task buttons ===== */
+.toast {
+  pointer-events: none !important;
+  z-index: 9999;
+}
+
+.toast:not(.show) {
+  pointer-events: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: translateY(16px) scale(.98);
+}
+
+.bottom-taskbar,
+#bottomTaskBar {
+  z-index: 10020 !important;
+  pointer-events: auto !important;
+}
+
+.bottom-taskbar *,
+#bottomTaskBar * {
+  pointer-events: auto;
+}
+
+.modal.show {
+  z-index: 10050 !important;
+}
+
+.modal:not(.show) {
+  pointer-events: none !important;
+  visibility: hidden;
+}
