@@ -684,7 +684,7 @@ function ensureSessionMenuModal(){
           <h2 id="sessionMenuTitle">+ Thêm món</h2>
           <p class="muted" id="sessionMenuHint">Chọn món khách gọi thêm tại bàn.</p>
         </div>
-        <button id="sessionMenuCloseBtn" class="session-menu-close" class="modal-close" type="button">×</button>
+        <button id="sessionMenuCloseBtn" class="session-menu-close modal-close" type="button" aria-label="Đóng">✕</button>
       </div>
       <div class="session-menu-layout">
         <div>
@@ -705,7 +705,6 @@ function ensureSessionMenuModal(){
     </div>`;
   document.body.appendChild(wrap);
 
-  $("#sessionMenuCloseBtn").onclick = () => $("#sessionMenuModal").classList.remove("show");
   $("#sessionMenuSearch").oninput = renderSessionMenuGrid;
   $("#sessionAddItemsForm").onsubmit = submitSessionAddItems;
 }
@@ -876,4 +875,21 @@ document.addEventListener("click", function(e) {
   const modal = document.getElementById("sessionMenuModal");
   if (modal) modal.classList.remove("show");
 });
+
+
+
+/* ===== fixed: session menu close button ===== */
+function closeSessionMenuModal(){
+  const modal = document.getElementById("sessionMenuModal");
+  if(!modal) return;
+  modal.classList.remove("show");
+}
+
+document.addEventListener("click", function(e){
+  const btn = e.target.closest("#sessionMenuCloseBtn, #sessionMenuModal .session-menu-close, #sessionMenuModal .modal-close");
+  if(!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  closeSessionMenuModal();
+}, true);
 
