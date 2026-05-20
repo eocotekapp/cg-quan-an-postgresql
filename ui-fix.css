@@ -1877,25 +1877,9 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
 }
 
 
-/* ===== v15 deep-audit UI safety fixes ===== */
-.toast {
-  pointer-events: none !important;
-}
-.toast:not(.show) {
-  pointer-events: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-}
-#bottomTaskBar,
-.bottom-taskbar {
-  pointer-events: auto !important;
-  z-index: 10020 !important;
-}
-#bottomTaskBar *,
-.bottom-taskbar * {
-  pointer-events: auto !important;
-}
-.modal:not(.show) {
-  pointer-events: none !important;
-  visibility: hidden;
-}
+/* ===== v16 final safety: toast does not block bottom taskbar ===== */
+.toast { pointer-events: none !important; }
+.toast:not(.show) { pointer-events: none !important; opacity: 0 !important; visibility: hidden !important; }
+#bottomTaskBar, .bottom-taskbar { pointer-events: auto !important; z-index: 10020 !important; }
+#bottomTaskBar *, .bottom-taskbar * { pointer-events: auto !important; }
+.modal:not(.show) { pointer-events: none !important; visibility: hidden; }

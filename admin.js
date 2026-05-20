@@ -11,59 +11,6 @@ const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const money = n => new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + "đ";
 
-
-
-/* ===== v15 deep audit runtime-safe helpers ===== */
-window.cgSafeText = window.cgSafeText || function(value, fallback = "") {
-  if (value == null) return fallback;
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
-  if (typeof value === "object") return value.text || value.label || value.name || value.title || value.status || fallback || "";
-  return fallback || String(value);
-};
-
-window.cgStatusLabel = window.cgStatusLabel || function(status, fallback = "") {
-  const raw = window.cgSafeText(status, fallback);
-  const map = {
-    new: "Mới",
-    pending: "Chờ xác nhận",
-    confirmed: "Đã xác nhận",
-    done: "Hoàn thành",
-    completed: "Hoàn thành",
-    cancelled: "Đã huỷ",
-    canceled: "Đã huỷ",
-    active: "Đang dùng",
-    open: "Đang mở",
-    closed: "Đã đóng",
-    free: "Trống",
-    reserved: "Đã đặt",
-    using: "Đang dùng",
-    cleaning: "Đang dọn",
-    locked: "Khoá"
-  };
-  return map[raw] || raw || fallback || "Không rõ";
-};
-
-window.cgCategoryLabel = window.cgCategoryLabel || function(category, fallback = "") {
-  const raw = window.cgSafeText(category, fallback);
-  const map = {
-    all: "Tất cả",
-    booking: "Đặt bàn",
-    bookings: "Đặt bàn",
-    order: "Đơn ship",
-    orders: "Đơn ship",
-    session: "Phiên bàn",
-    sessions: "Phiên bàn",
-    main: "Món chính",
-    drink: "Đồ uống",
-    snack: "Ăn vặt",
-    dessert: "Tráng miệng"
-  };
-  return map[raw] || raw || fallback || "Khác";
-};
-
-window.getCategoryLabel = window.getCategoryLabel || window.cgCategoryLabel;
-window.getStatusLabel = window.getStatusLabel || window.cgStatusLabel;
-
 let pin = sessionStorage.getItem("ADMIN_PIN") || "";
 let confirmJob = null;
 let autoRefreshTimer = null;
@@ -89,26 +36,47 @@ function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAl
 
 
 function getStatusLabel(status, fallback = "") {
+  const raw = status && typeof status === "object"
+    ? (status.text || status.label || status.name || status.status || fallback)
+    : (status ?? fallback);
+  const key = String(raw || "");
   return {
     new: "Mới",
+    pending: "Chờ xác nhận",
     confirmed: "Đã xác nhận",
     done: "Hoàn thành",
+    completed: "Hoàn thành",
     cancelled: "Đã huỷ",
+    canceled: "Đã huỷ",
     active: "Đang dùng",
-    closed: "Đã đóng"
-  }
+    open: "Đang mở",
+    closed: "Đã đóng",
+    locked: "Khoá",
+    free: "Trống",
+    reserved: "Đã đặt",
+    using: "Đang dùng",
+    cleaning: "Đang dọn"
+  }[key] || key || fallback || "Không rõ";
+}
 
 function getCategoryLabel(category, fallback = "") {
+  const raw = category && typeof category === "object"
+    ? (category.text || category.label || category.name || category.category || fallback)
+    : (category ?? fallback);
+  const key = String(raw || "");
   return {
     all: "Tất cả",
     main: "Món chính",
     drink: "Đồ uống",
     snack: "Ăn vặt",
-    dessert: "Tráng miệng"
-  }[category] || fallback || category || "Khác";
-}
-
-[status] || fallback || status || "cập nhật";
+    dessert: "Tráng miệng",
+    booking: "Đặt bàn",
+    bookings: "Đặt bàn",
+    order: "Đơn ship",
+    orders: "Đơn ship",
+    session: "Phiên bàn",
+    sessions: "Phiên bàn"
+  }[key] || key || fallback || "Khác";
 }
 
 function toast(message, type = "ok") {
@@ -531,7 +499,7 @@ function renderTables(items){
     const t=items.find(x=>x.id===node.dataset.adminTable);
     const status=t?.locked ? "locked" : (t?.status || "free");
     node.classList.remove("table-free","table-reserved","table-using","table-locked","table-cleaning","table-pending");
-    node.classList.add(`table-${window.cgStatusLabel(status)}`);
+    node.classList.add(`table-${status}`);
     node.onclick=()=>openTableForm(t||{id:node.dataset.adminTable,name:node.dataset.adminTable,seats:4,status:"free",locked:false});
   });
   $("#tableDetail").innerHTML=items.map(t=>`<div class="table-mini-row"><b>${escapeHtml(t.id)}</b><span>${getStatusLabel(t.locked?"locked":t.status)}</span><small>${escapeHtml(t.zone||"")}</small></div>`).join("");
@@ -579,7 +547,7 @@ function renderMenuAdmin(items){
       <div class="mini-main">
         <div class="mini-title"><b>${escapeHtml(item.icon||"🍽️")} ${escapeHtml(item.name||"")}</b><small>${escapeHtml(item.id)}</small></div>
         <div class="mini-meta">
-          <span>${escapeHtml(getCategoryLabel(item?.category || x?.category || menu?.category || category)(item.category))}</span>
+          <span>${escapeHtml(getCategoryLabel(item.category))}</span>
           <span>Gốc: <b>${money(item.originalPrice)}</b></span>
           <span>Bán: <b>${money(item.price)}</b></span>
           <span>Lãi: <b class="${Number(item.profit||0)>=0?"good":"bad"}">${money(item.profit)}</b></span>
@@ -680,14 +648,13 @@ function fillSettingsForm(){ const f=$("#settingsForm"); if(!f) return; f.shopNa
 
 function bindActions(){
   $$(".action-btn[data-type]").forEach(btn=>btn.onclick=()=>{
-    const label = window.cgStatusLabel(btn && btn.dataset && btn.dataset.status, btn && btn.textContent ? btn.textContent.trim() : "");
+    const label = getStatusLabel(btn.dataset.status, btn.textContent.trim());
     confirmJob = async () => {
       const payload = { type: btn.dataset.type, id: btn.dataset.id, status: btn.dataset.status };
       if (!payload.type || !payload.id || !payload.status) throw new Error("Thiếu dữ liệu nút xác nhận");
       await api("/api/status", { method: "POST", body: JSON.stringify(payload) });
       toast(`Đã cập nhật: ${label}`);
-      await loadDashboard();
-      bindActions();};
+      await loadDashboard(); bindActions();};
     $("#confirmTitle").textContent="Xác nhận cập nhật"; $("#confirmMessage").textContent=`Chuyển trạng thái sang “${label}”?`; $("#confirmModal").classList.add("show");
   });
 }
