@@ -43,7 +43,19 @@ function getStatusLabel(status, fallback = "") {
     cancelled: "Đã huỷ",
     active: "Đang dùng",
     closed: "Đã đóng"
-  }[status] || fallback || status || "cập nhật";
+  }
+
+function getCategoryLabel(category, fallback = "") {
+  return {
+    all: "Tất cả",
+    main: "Món chính",
+    drink: "Đồ uống",
+    snack: "Ăn vặt",
+    dessert: "Tráng miệng"
+  }[category] || fallback || category || "Khác";
+}
+
+[status] || fallback || status || "cập nhật";
 }
 
 function toast(message, type = "ok") {
@@ -514,7 +526,7 @@ function renderMenuAdmin(items){
       <div class="mini-main">
         <div class="mini-title"><b>${escapeHtml(item.icon||"🍽️")} ${escapeHtml(item.name||"")}</b><small>${escapeHtml(item.id)}</small></div>
         <div class="mini-meta">
-          <span>${escapeHtml(categoryName(item.category))}</span>
+          <span>${escapeHtml(getCategoryLabel(item?.category || x?.category || menu?.category || category)(item.category))}</span>
           <span>Gốc: <b>${money(item.originalPrice)}</b></span>
           <span>Bán: <b>${money(item.price)}</b></span>
           <span>Lãi: <b class="${Number(item.profit||0)>=0?"good":"bad"}">${money(item.profit)}</b></span>
