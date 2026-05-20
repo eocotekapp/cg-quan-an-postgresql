@@ -1883,3 +1883,23 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
 #bottomTaskBar, .bottom-taskbar { pointer-events: auto !important; z-index: 10020 !important; }
 #bottomTaskBar *, .bottom-taskbar * { pointer-events: auto !important; }
 .modal:not(.show) { pointer-events: none !important; visibility: hidden; }
+/* Sửa màu món trong popup Gộp món vào phiên bàn */
+#sessionMenuModal #sessionMenuGrid .session-food-card {
+  background: #1b1711 !important;
+  color: #fff7d6 !important;
+  opacity: 1 !important;
+  filter: none !important;
+  border: 1px solid rgba(255, 214, 120, 0.28) !important;
+}
+
+#sessionMenuModal #sessionMenuGrid .session-food-card b,
+#sessionMenuModal #sessionMenuGrid .session-food-card span {
+  color: #fff7d6 !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+#sessionMenuModal #sessionMenuGrid .session-food-card span {
+  color: #ffd86b !important;
+  font-weight: 900 !important;
+}
