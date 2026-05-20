@@ -684,7 +684,7 @@ function ensureSessionMenuModal(){
           <h2 id="sessionMenuTitle">+ Thêm món</h2>
           <p class="muted" id="sessionMenuHint">Chọn món khách gọi thêm tại bàn.</p>
         </div>
-        <button id="sessionMenuCloseBtn" class="modal-close" type="button">×</button>
+        <button id="sessionMenuCloseBtn" class="session-menu-close" class="modal-close" type="button">×</button>
       </div>
       <div class="session-menu-layout">
         <div>
@@ -864,4 +864,16 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden && pin) l
 
 if(pin) showDashboard(); else showPin();
 
+
+
+
+/* ===== v17: reliable close for session add-items modal ===== */
+document.addEventListener("click", function(e) {
+  const closeBtn = e.target.closest("#sessionMenuModal .session-menu-close, #sessionMenuModal #sessionMenuCloseBtn, #sessionMenuModal #closeSessionMenuBtn, #sessionMenuModal [data-session-menu-close], #sessionMenuModal .modal-close");
+  if (!closeBtn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const modal = document.getElementById("sessionMenuModal");
+  if (modal) modal.classList.remove("show");
+});
 

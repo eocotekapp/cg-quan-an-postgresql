@@ -1883,3 +1883,77 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
 #bottomTaskBar, .bottom-taskbar { pointer-events: auto !important; z-index: 10020 !important; }
 #bottomTaskBar *, .bottom-taskbar * { pointer-events: auto !important; }
 .modal:not(.show) { pointer-events: none !important; visibility: hidden; }
+
+
+/* ===== v17: session add-items modal readability + close button ===== */
+#sessionMenuModal #sessionMenuGrid .session-food-card,
+#sessionMenuModal .session-menu-grid .session-food-card {
+  background: #fff7ea !important;
+  color: #15100a !important;
+  opacity: 1 !important;
+  filter: none !important;
+  text-shadow: none !important;
+  border: 1px solid rgba(70, 45, 18, .22) !important;
+}
+
+#sessionMenuModal #sessionMenuGrid .session-food-card *,
+#sessionMenuModal .session-menu-grid .session-food-card * {
+  color: #15100a !important;
+  opacity: 1 !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+#sessionMenuModal #sessionMenuGrid .session-food-card b,
+#sessionMenuModal .session-menu-grid .session-food-card b {
+  color: #15100a !important;
+  font-weight: 900 !important;
+}
+
+#sessionMenuModal #sessionMenuGrid .session-food-card span,
+#sessionMenuModal .session-menu-grid .session-food-card span {
+  color: #1d1408 !important;
+  font-weight: 950 !important;
+}
+
+#sessionMenuModal .modal-card,
+#sessionMenuModal .modal-panel,
+#sessionMenuModal > div {
+  position: relative !important;
+}
+
+#sessionMenuModal .session-menu-close,
+#sessionMenuModal #sessionMenuCloseBtn,
+#sessionMenuModal #closeSessionMenuBtn,
+#sessionMenuModal [data-session-menu-close],
+#sessionMenuModal .modal-close {
+  position: absolute !important;
+  top: 14px !important;
+  right: 14px !important;
+  left: auto !important;
+  transform: none !important;
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 999px !important;
+  background: #d83b34 !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.25) !important;
+  box-shadow: 0 12px 28px rgba(216, 59, 52, .35) !important;
+  z-index: 10080 !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  font-weight: 950 !important;
+  font-size: 22px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+#sessionMenuModal .session-menu-close *,
+#sessionMenuModal #sessionMenuCloseBtn *,
+#sessionMenuModal #closeSessionMenuBtn *,
+#sessionMenuModal [data-session-menu-close] *,
+#sessionMenuModal .modal-close * {
+  color: #fff !important;
+  opacity: 1 !important;
+}
