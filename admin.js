@@ -177,9 +177,7 @@ function renderAppOrderCard(item){
     <div class="app-order-actions">
       ${status === "new" ? `<button class="action-btn action-confirm" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="${isBooking ? "confirmed" : "processing"}">Xác nhận</button>` : ""}
       ${status === "confirmed" && !isBooking ? `<button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="delivering">Đang giao</button><button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="done">Hoàn thành</button>` : ""}
-      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button>
-      ${s.id || s.sessionCode ? `<button class="btn soft full view-session-btn" type="button" data-view-session="${escapeHtml(s.id || s.sessionCode || "")}" data-session-table="${escapeHtml(s.table || "")}">Xem phiên bàn này</button>` : ""}
-      ${b.sessionId || b.sessionCode ? `<button class="btn soft full view-session-btn" type="button" data-view-session="${escapeHtml(b.sessionId || b.sessionCode || "")}" data-session-table="${escapeHtml(b.table || "")}">Xem phiên bàn này</button>` : ""}<button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
+      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button><button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
       ${status !== "done" && status !== "cancelled" ? `<button class="action-btn action-cancel" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="cancelled">Hủy</button>` : ""}
       ${status === "done" || status === "cancelled" ? `<button class="action-btn action-delete" ${isBooking ? `data-delete-booking="${escapeHtml(item.id)}"` : `data-delete-order="${escapeHtml(item.id)}"`}>Xoá hẳn</button>` : ""}
     </div>
@@ -300,9 +298,7 @@ function renderMiniOrderCard(item){
     <div class="admin-actions dash-actions">
       ${status === "new" ? `<button class="action-btn action-confirm" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="${isBooking ? "confirmed" : "processing"}">Xác nhận</button>` : ""}
       ${status === "confirmed" && !isBooking ? `<button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="delivering">Đang giao</button><button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="done">Hoàn thành</button>` : ""}
-      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button>
-      ${s.id || s.sessionCode ? `<button class="btn soft full view-session-btn" type="button" data-view-session="${escapeHtml(s.id || s.sessionCode || "")}" data-session-table="${escapeHtml(s.table || "")}">Xem phiên bàn này</button>` : ""}
-      ${b.sessionId || b.sessionCode ? `<button class="btn soft full view-session-btn" type="button" data-view-session="${escapeHtml(b.sessionId || b.sessionCode || "")}" data-session-table="${escapeHtml(b.table || "")}">Xem phiên bàn này</button>` : ""}<button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
+      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button><button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
       ${status !== "done" && status !== "cancelled" ? `<button class="action-btn action-cancel" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="cancelled">Hủy</button>` : ""}
       ${status === "done" || status === "cancelled" ? `<button class="action-btn action-delete" ${isBooking ? `data-delete-booking="${escapeHtml(item.id)}"` : `data-delete-order="${escapeHtml(item.id)}"`}>Xoá hẳn</button>` : ""}
     </div>
@@ -488,8 +484,6 @@ function renderBookings(items){
       <div class="admin-actions">
         ${canConfirm ? `<button class="action-btn action-confirm" data-type="bookings" data-id="${escapeHtml(b.id)}" data-status="confirmed">Xác nhận & tạo phiên bàn</button>` : ""}
         ${sessionIsOpen ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(b.sessionId)}" data-session-table="${escapeHtml(b.table||"")}">+ Thêm món</button>
-      ${s.id || s.sessionCode ? `<button class="btn soft full view-session-btn" type="button" data-view-session="${escapeHtml(s.id || s.sessionCode || "")}" data-session-table="${escapeHtml(s.table || "")}">Xem phiên bàn này</button>` : ""}
-      ${b.sessionId || b.sessionCode ? `<button class="btn soft full view-session-btn" type="button" data-view-session="${escapeHtml(b.sessionId || b.sessionCode || "")}" data-session-table="${escapeHtml(b.table || "")}">Xem phiên bàn này</button>` : ""}
         <button class="action-btn action-done" data-session-close="${escapeHtml(b.sessionId)}">Thanh toán / Hoàn thành</button>` : ""}
         ${sessionIsClosed ? `<span class="status status-done">Đã đóng đơn, không thể thêm món</span>` : ""}
         ${canCancel ? `<button class="action-btn action-cancel" data-type="bookings" data-id="${escapeHtml(b.id)}" data-status="cancelled">Hủy</button>` : ""}
@@ -540,8 +534,6 @@ function renderSessions(items){
       <p class="muted">Lượt gọi: ${(s.calls||[]).length} • Mở lúc: ${escapeHtml(s.openedAtText||"")} ${s.lockStartText && s.lockEndText ? `• Khóa: ${escapeHtml(s.lockStartText)} → ${escapeHtml(s.lockEndText)}` : ""}</p>
       <div class="admin-actions">
         <button class="action-btn action-confirm" data-session-add-items="${escapeHtml(s.id)}" data-session-table="${escapeHtml((s.tables||[])[0]||"")}">+ Thêm món</button>
-      ${s.id || s.sessionCode ? `<button class="btn soft full view-session-btn" type="button" data-view-session="${escapeHtml(s.id || s.sessionCode || "")}" data-session-table="${escapeHtml(s.table || "")}">Xem phiên bàn này</button>` : ""}
-      ${b.sessionId || b.sessionCode ? `<button class="btn soft full view-session-btn" type="button" data-view-session="${escapeHtml(b.sessionId || b.sessionCode || "")}" data-session-table="${escapeHtml(b.table || "")}">Xem phiên bàn này</button>` : ""}
         <button class="action-btn action-confirm" data-session-move="${escapeHtml(s.id)}">Chuyển / merge</button>
         <button class="action-btn action-done" data-session-close="${escapeHtml(s.id)}">Thanh toán / Hoàn thành</button>
       </div>
@@ -653,128 +645,6 @@ function openTableForm(t){
   $("#tableModal").classList.add("show");
 }
 function fillSettingsForm(){ const f=$("#settingsForm"); if(!f) return; f.shopName.value=settingsCache.shopName||""; f.shippingFee.value=settingsCache.shippingFee??15000; f.freeShipFrom.value=settingsCache.freeShipFrom??0; }
-
-
-/* ===== v19: view linked table session ===== */
-function ensureViewSessionModal(){
-  let modal = document.getElementById("viewSessionModal");
-  if (modal) return modal;
-  const wrap = document.createElement("div");
-  wrap.id = "viewSessionModal";
-  wrap.className = "modal";
-  wrap.innerHTML = `
-    <div class="modal-card wide-modal view-session-card">
-      <div class="modal-head">
-        <div>
-          <p class="eyebrow">Phiên bàn</p>
-          <h2 id="viewSessionTitle">Chi tiết phiên bàn</h2>
-          <p id="viewSessionSub" class="muted">Đang tải...</p>
-        </div>
-        <button id="viewSessionCloseBtn" class="modal-close view-session-close" type="button" aria-label="Đóng">×</button>
-      </div>
-      <div id="viewSessionBody" class="view-session-body">
-        <div class="panel">Đang tải phiên bàn...</div>
-      </div>
-    </div>`;
-  document.body.appendChild(wrap);
-  wrap.addEventListener("click", function(e){
-    if (e.target.id === "viewSessionModal" || e.target.closest("#viewSessionCloseBtn")) {
-      closeViewSessionModal();
-    }
-  });
-  return wrap;
-}
-
-function closeViewSessionModal(){
-  const modal = document.getElementById("viewSessionModal");
-  if (!modal) return;
-  modal.classList.remove("show");
-  modal.setAttribute("aria-hidden", "true");
-}
-
-function normalizeSessionItems(session){
-  const list = [];
-  const addMany = (arr, group) => {
-    if (!Array.isArray(arr)) return;
-    arr.forEach(item => {
-      const name = item.name || item.title || "Món";
-      const qty = Number(item.qty || item.quantity || 1);
-      const price = Number(item.price || 0);
-      list.push({ name, qty, price, group, total: price * qty });
-    });
-  };
-  addMany(session.preorderItems, "Món đặt trước");
-  addMany(session.items, "Món trong phiên");
-  addMany(session.extraItems, "Món gọi thêm");
-  addMany(session.summaryItems, "Tổng hợp món");
-  addMany(session.orderItems, "Món trong đơn");
-  return list;
-}
-
-function renderViewSession(session){
-  const body = document.getElementById("viewSessionBody");
-  if (!body) return;
-  const items = normalizeSessionItems(session);
-  const totalFromItems = items.reduce((sum, item) => sum + Number(item.total || 0), 0);
-  const total = Number(session.total || session.grandTotal || session.currentTotal || totalFromItems || 0);
-  const code = session.sessionCode || session.code || session.id || "Phiên bàn";
-  const table = session.table || session.tableId || "";
-  const status = session.status || "";
-  document.getElementById("viewSessionTitle").textContent = `Phiên ${code}`;
-  document.getElementById("viewSessionSub").textContent = `${table ? "Bàn " + table + " • " : ""}${status ? "Trạng thái: " + status : ""}`;
-
-  if (!items.length) {
-    body.innerHTML = `<div class="panel">Chưa có món trong phiên này.</div>
-      <div class="view-session-total"><span>Tổng tiền</span><b>${money(total)}</b></div>`;
-    return;
-  }
-
-  body.innerHTML = `
-    <div class="view-session-list">
-      ${items.map((item, index) => `
-        <div class="view-session-row">
-          <b class="view-session-no">${index + 1}</b>
-          <div class="view-session-name">
-            <strong>${escapeHtml(item.name)}</strong>
-            <small>${escapeHtml(item.group || "Món")}</small>
-          </div>
-          <em>x${Number(item.qty || 1)}</em>
-          <span>${money(Number(item.total || 0))}</span>
-        </div>
-      `).join("")}
-    </div>
-    <div class="view-session-total">
-      <span>Tổng tiền phiên bàn</span>
-      <b>${money(total)}</b>
-    </div>`;
-}
-
-async function openViewSessionModal(sessionId, fallbackTable = ""){
-  const modal = ensureViewSessionModal();
-  modal.removeAttribute("aria-hidden");
-  modal.classList.add("show");
-  document.getElementById("viewSessionTitle").textContent = "Chi tiết phiên bàn";
-  document.getElementById("viewSessionSub").textContent = fallbackTable ? `Bàn ${fallbackTable}` : "Đang tải...";
-  document.getElementById("viewSessionBody").innerHTML = `<div class="panel">Đang tải phiên bàn...</div>`;
-
-  try {
-    let data;
-    if (sessionId) {
-      data = await api(`/api/sessions?id=${encodeURIComponent(sessionId)}`);
-    } else if (fallbackTable) {
-      data = await api(`/api/sessions?table=${encodeURIComponent(fallbackTable)}`);
-    } else {
-      throw new Error("Không tìm thấy phiên bàn liên kết");
-    }
-    const session = data.item || data.session || (Array.isArray(data.items) ? data.items[0] : data);
-    if (!session) throw new Error("Không có dữ liệu phiên bàn");
-    renderViewSession(session);
-  } catch (err) {
-    console.error(err);
-    document.getElementById("viewSessionBody").innerHTML = `<div class="panel error-panel">Không tải được phiên bàn: ${escapeHtml(err.message)}</div>`;
-    toast(err.message || "Không tải được phiên bàn", "error");
-  }
-}
 
 function bindActions(){
   $$(".action-btn[data-type]").forEach(btn=>btn.onclick=()=>{
@@ -1023,16 +893,3 @@ document.addEventListener("click", function(e){
   closeSessionMenuModal();
 }, true);
 
-
-
-/* ===== v19: delegated view session button ===== */
-if (!window.__CG_VIEW_SESSION_BOUND__) {
-  window.__CG_VIEW_SESSION_BOUND__ = true;
-  document.addEventListener("click", function(e){
-    const btn = e.target.closest("[data-view-session]");
-    if (!btn) return;
-    e.preventDefault();
-    e.stopPropagation();
-    openViewSessionModal(btn.dataset.viewSession || "", btn.dataset.sessionTable || "");
-  });
-}
