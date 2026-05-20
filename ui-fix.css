@@ -2013,3 +2013,47 @@ body:not(.admin-page) .add-btn{padding:9px 12px!important;border-radius:13px!imp
   filter:none !important;
   text-shadow:none !important;
 }
+
+
+/* ===== fixed-real: sessionMenuModal close state ===== */
+#sessionMenuModal[aria-hidden="true"],
+#sessionMenuModal:not(.show) {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+#sessionMenuModal.show {
+  pointer-events: auto !important;
+}
+
+#sessionMenuModal .modal-head {
+  position: relative !important;
+  padding-right: 62px !important;
+}
+
+#sessionMenuCloseBtn {
+  position: absolute !important;
+  top: 12px !important;
+  right: 12px !important;
+  left: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  border: none !important;
+  border-radius: 14px !important;
+  background: #ff3b30 !important;
+  color: #fff !important;
+  font-size: 26px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

@@ -718,7 +718,14 @@ function openSessionMenuModal(sessionId, table){
   $("#sessionMenuTitle").textContent = `+ Thêm món ${table ? "bàn " + table : ""}`;
   renderSessionMenuGrid();
   renderSessionAddCart();
-  $("#sessionMenuModal").classList.add("show");
+  (() => {
+    const modal = document.getElementById("sessionMenuModal");
+    if (modal) {
+      modal.style.display = "";
+      modal.removeAttribute("aria-hidden");
+      modal.classList.add("show");
+    }
+  })();
 }
 
 function renderSessionMenuGrid(){
@@ -866,27 +873,20 @@ if(pin) showDashboard(); else showPin();
 
 
 
-/* ===== v17: reliable close for session add-items modal ===== */
-document.addEventListener("click", function(e) {
-  const closeBtn = e.target.closest("#sessionMenuModal .session-menu-close, #sessionMenuModal #sessionMenuCloseBtn, #sessionMenuModal #closeSessionMenuBtn, #sessionMenuModal [data-session-menu-close], #sessionMenuModal .modal-close");
-  if (!closeBtn) return;
-  e.preventDefault();
-  e.stopPropagation();
-  const modal = document.getElementById("sessionMenuModal");
-  if (modal) modal.classList.remove("show");
-});
 
 
 
-/* ===== fixed: session menu close button ===== */
+/* ===== fixed-real: close sessionMenuModal completely ===== */
 function closeSessionMenuModal(){
   const modal = document.getElementById("sessionMenuModal");
   if(!modal) return;
   modal.classList.remove("show");
+  modal.setAttribute("aria-hidden", "true");
+  modal.style.display = "none";
 }
 
 document.addEventListener("click", function(e){
-  const btn = e.target.closest("#sessionMenuCloseBtn, #sessionMenuModal .session-menu-close, #sessionMenuModal .modal-close");
+  const btn = e.target.closest("#sessionMenuCloseBtn");
   if(!btn) return;
   e.preventDefault();
   e.stopPropagation();
