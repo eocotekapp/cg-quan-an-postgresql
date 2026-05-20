@@ -1,96 +1,11 @@
-
-/* ===== Admin Session View Add-on ===== */
-.view-session-addon-btn {
-  margin-top: 10px !important;
-  background: rgba(255,214,120,.12) !important;
-  border: 1px solid rgba(255,214,120,.28) !important;
-  color: #ffe08a !important;
-}
-
-#viewSessionAddonModal.show {
-  display: flex !important;
-  pointer-events: auto !important;
-}
-
-#viewSessionAddonModal[aria-hidden="true"],
-#viewSessionAddonModal:not(.show) {
-  display: none !important;
-  pointer-events: none !important;
-}
-
-.view-session-addon-card {
-  width: min(94vw, 760px);
-  max-height: 88vh;
-  overflow: auto;
-}
-
-.view-session-addon-body {
-  margin-top: 14px;
-}
-
-.view-session-addon-list {
-  display: grid;
-  gap: 8px;
-}
-
-.view-session-addon-row {
-  display: grid;
-  grid-template-columns: 34px 1fr auto auto;
-  gap: 10px;
-  align-items: center;
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.1);
-}
-
-.view-session-addon-row > b {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255,214,120,.16);
-  color: #ffe08a;
-}
-
-.view-session-addon-row strong {
-  display: block;
-  color: #fff;
-}
-
-.view-session-addon-row small {
-  display: block;
-  color: rgba(255,255,255,.65);
-  margin-top: 2px;
-}
-
-.view-session-addon-row em {
-  font-style: normal;
-  color: #9dffb0;
-  font-weight: 900;
-}
-
-.view-session-addon-row span {
-  color: #ffe08a;
-  font-weight: 950;
-  white-space: nowrap;
-}
-
-.view-session-addon-total {
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 16px;
-  background: rgba(255,214,120,.12);
-  border: 1px solid rgba(255,214,120,.28);
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-weight: 900;
-}
-
-.view-session-addon-total b {
-  color: #ffe08a;
-  font-size: 22px;
-}
+/* ===== Admin Session View Add-on v21 ===== */
+.view-session-addon-btn{margin-top:10px!important;background:rgba(255,214,120,.12)!important;border:1px solid rgba(255,214,120,.28)!important;color:#ffe08a!important}
+#viewSessionAddonModal.show{display:flex!important;pointer-events:auto!important}
+#viewSessionAddonModal[aria-hidden="true"],#viewSessionAddonModal:not(.show){display:none!important;pointer-events:none!important}
+.view-session-addon-card{width:min(94vw,760px);max-height:88vh;overflow:auto;position:relative}
+#viewSessionAddonClose{position:absolute!important;top:14px!important;right:14px!important;width:44px!important;height:44px!important;border-radius:14px!important;border:none!important;background:#ff3b30!important;color:#fff!important;font-size:26px!important;font-weight:950!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important;box-shadow:0 6px 18px rgba(255,59,48,.35)!important;z-index:999999!important;opacity:1!important;pointer-events:auto!important}
+.view-session-addon-head{padding-right:62px}.view-session-addon-body{margin-top:14px}.view-session-addon-list{display:grid;gap:8px}
+.view-session-addon-row{display:grid;grid-template-columns:34px 1fr auto auto;gap:10px;align-items:center;padding:10px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.view-session-addon-row>b{width:28px;height:28px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,214,120,.16);color:#ffe08a}
+.view-session-addon-row strong{display:block;color:#fff}.view-session-addon-row small{display:block;color:rgba(255,255,255,.65);margin-top:2px}.view-session-addon-row em{font-style:normal;color:#9dffb0;font-weight:900}.view-session-addon-row span{color:#ffe08a;font-weight:950;white-space:nowrap}
+.view-session-addon-total{margin-top:14px;padding:14px;border-radius:16px;background:rgba(255,214,120,.12);border:1px solid rgba(255,214,120,.28);display:flex;justify-content:space-between;gap:12px;font-weight:900}.view-session-addon-total b{color:#ffe08a;font-size:22px}
