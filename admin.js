@@ -11,885 +11,336 @@ const $ = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const money = n => new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + "đ";
 
-let pin = sessionStorage.getItem("ADMIN_PIN") || "";
-let confirmJob = null;
-let autoRefreshTimer = null;
-let currentRange = "day";
-let currentStatusFilter = "new";
-let currentKindFilter = "all";
-let menuCache = [];
-let tableCache = [];
-let inventoryCache = [];
-let sessionCache = [];
-let settingsCache = {};
-let lastOrderCount = 0;
-let lastBookingCount = 0;
-let firstLoadDone = false;
+let menuItems = [];
+let cart = [];
+let coupon = "";
+let selectedTable = "B01";
+let featuredId = null;
+let publicTableStatus = [];
+let tableRefreshTimer = null;
 
 async function api(path, options = {}) {
-  const res = await cgFetch(path, { headers: { "Content-Type":"application/json", "x-admin-pin": pin }, ...options });
+  const res = await cgFetch(path, { headers: { "Content-Type": "application/json" }, ...options });
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.ok === false) throw new Error(data.error || "Có lỗi xảy ra");
   return data;
 }
-function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
 
-
-function getStatusLabel(status, fallback = "") {
-  const raw = status && typeof status === "object"
-    ? (status.text || status.label || status.name || status.status || fallback)
-    : (status ?? fallback);
-  const key = String(raw || "");
-  return {
-    new: "Mới",
-    pending: "Chờ xác nhận",
-    confirmed: "Đã xác nhận",
-    done: "Hoàn thành",
-    completed: "Hoàn thành",
-    cancelled: "Đã huỷ",
-    canceled: "Đã huỷ",
-    active: "Đang dùng",
-    open: "Đang mở",
-    closed: "Đã đóng",
-    locked: "Khoá",
-    free: "Trống",
-    reserved: "Đã đặt",
-    using: "Đang dùng",
-    cleaning: "Đang dọn"
-  }[key] || key || fallback || "Không rõ";
+function escapeHtml(value) {
+  return String(value ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
 }
-
-function getCategoryLabel(category, fallback = "") {
-  const raw = category && typeof category === "object"
-    ? (category.text || category.label || category.name || category.category || fallback)
-    : (category ?? fallback);
-  const key = String(raw || "");
-  return {
-    all: "Tất cả",
-    main: "Món chính",
-    drink: "Đồ uống",
-    snack: "Ăn vặt",
-    dessert: "Tráng miệng",
-    booking: "Đặt bàn",
-    bookings: "Đặt bàn",
-    order: "Đơn ship",
-    orders: "Đơn ship",
-    session: "Phiên bàn",
-    sessions: "Phiên bàn"
-  }[key] || key || fallback || "Khác";
-}
-
 function toast(message, type = "ok") {
   const el = $("#toast");
-  if (!el) return;
   el.textContent = message;
   el.className = `toast show ${type}`;
-  el.style.pointerEvents = "none";
   clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => {
-    el.classList.remove("show", "ok", "error");
-    el.style.pointerEvents = "none";
-    el.textContent = "";
-  }, 2600);
+  toast.timer = setTimeout(() => el.classList.remove("show"), 2600);
 }
-function normalizedStatus(item){
-  const s = String(item.status || "new");
-  if (s === "done") return "done";
-  if (s === "cancelled") return "cancelled";
-  if (isOrderConfirmedStatus(s)) return "confirmed";
-  return "new";
+function showSuccess(title, message) {
+  $("#modalTitle").textContent = title;
+  $("#modalMessage").textContent = message;
+  $("#successModal").classList.add("show");
 }
-function itemKind(item){
-  return item.__kind || item.kind || item.type || "";
-}
-function sortNewest(a,b){
-  const av = Number(a.createdAtMs || a.arrivalMs || a.createdAt?.seconds || 0);
-  const bv = Number(b.createdAtMs || b.arrivalMs || b.createdAt?.seconds || 0);
-  return bv - av;
-}
-function buildMixedItems(orders, bookings){
-  return [
-    ...(orders || []).map(x => ({...x, __kind:"orders"})),
-    ...(bookings || []).map(x => ({...x, __kind:"bookings"}))
-  ].sort(sortNewest);
+function closeSuccess() { $("#successModal").classList.remove("show"); }
+function setLoading(btn, yes, text) {
+  if (!btn) return;
+  if (yes) { btn.dataset.oldText = btn.textContent; btn.textContent = text; btn.disabled = true; btn.style.opacity = ".7"; }
+  else { btn.textContent = btn.dataset.oldText || btn.textContent; btn.disabled = false; btn.style.opacity = "1"; }
 }
 
-function renderDashboardItemsBox(item){
-  const isBooking = itemKind(item) === "bookings";
-  const items = isBooking
-    ? (Array.isArray(item.preorderItems) ? item.preorderItems : [])
-    : (Array.isArray(item.items) ? item.items : []);
-  const total = items.reduce((sum, x) => sum + Number(x.price || 0) * Number(x.qty || 1), 0);
-  const boxTitle = isBooking ? "Món đặt trước" : "Món trong đơn";
-  const countText = items.length ? ` (${items.reduce((sum, x) => sum + Number(x.qty || 1), 0)} món)` : "";
-
-  return `<div class="dash-items-box ${items.length ? "has-items" : "no-items"}">
-    <div class="dash-items-title"><span>🍽️ ${boxTitle}${countText}</span></div>
-    ${
-      items.length
-      ? `<div class="dash-items-list">
-          ${items.map((x, index) => `
-            <p class="numbered-item-line">
-              <i class="item-no">${index + 1}</i>
-              <span>${escapeHtml(x.name || "Món")}</span>
-              <em>x${Number(x.qty || 1)}</em>
-              <strong>${money(Number(x.price || 0) * Number(x.qty || 1))}</strong>
-            </p>
-          `).join("")}
-        </div>
-        <div class="dash-items-total"><span>Tạm tính món:</span><strong>${money(total)}</strong></div>`
-      : `<p class="dash-items-empty">Chưa có món đặt kèm.</p>`
-    }
-  </div>`;
+function getCartPreorderItems() {
+  return cart.map(item => ({ id:item.id || "", name:item.name || "", price:Number(item.price || 0), qty:Number(item.qty || 1) }))
+    .filter(item => item.name && item.price > 0 && item.qty > 0);
+}
+function getCartSubtotal() {
+  return getCartPreorderItems().reduce((s,i)=>s+i.price*i.qty,0);
 }
 
-function renderAppOrderCard(item){
-  const kind = itemKind(item);
-  const isBooking = kind === "bookings";
-  const status = normalizedStatus(item);
-  const codeText = escapeHtml(isBooking ? (item.bookingCode || item.id) : (item.orderCode || item.id));
-  const name = escapeHtml(isBooking ? (item.name || "") : (item.customer?.name || ""));
-  const phone = escapeHtml(isBooking ? (item.phone || "") : (item.customer?.phone || ""));
-  const typeLabel = isBooking ? "Đặt bàn" : "Đơn ship";
-  const typeIcon = isBooking ? "🪑" : "🚚";
-  const mainLine = isBooking 
-    ? `📅 ${escapeHtml(item.date || "")} • ${escapeHtml(item.time || "")}`
-    : `📍 ${escapeHtml(item.customer?.address || "")}`;
-  const secondLine = isBooking
-    ? `👥 Bàn ${escapeHtml(item.table || "")} • ${escapeHtml(item.guests || "")} người`
-    : `💰 ${money(item.total || 0)}${item.shippingFee ? " • Ship: " + money(item.shippingFee) : ""}`;
-  const badge = status === "new" ? "MỚI" : getStatusLabel(item.status);
-
-  return `<article class="app-order-card ${isBooking ? "booking-card" : "ship-card"}">
-    <div class="app-order-head">
-      <div class="app-order-type"><span>${typeIcon}</span><b>${typeLabel}</b><em>${codeText}</em></div>
-      <strong class="status status-${escapeHtml(item.status || "new")}">${escapeHtml(badge)}</strong>
-    </div>
-    <div class="app-order-content">
-      <div class="app-order-body">
-        <p>${mainLine}</p>
-        <p>${secondLine}</p>
-        <p>👤 ${name}</p>
-        <p>☎ ${phone}</p>
-      </div>
-      ${renderDashboardItemsBox(item)}
-    </div>
-    <div class="app-order-actions">
-      ${status === "new" ? `<button class="action-btn action-confirm" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="${isBooking ? "confirmed" : "processing"}">Xác nhận</button>` : ""}
-      ${status === "confirmed" && !isBooking ? `<button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="delivering">Đang giao</button><button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="done">Hoàn thành</button>` : ""}
-      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button><button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
-      ${status !== "done" && status !== "cancelled" ? `<button class="action-btn action-cancel" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="cancelled">Hủy</button>` : ""}
-      ${status === "done" || status === "cancelled" ? `<button class="action-btn action-delete" ${isBooking ? `data-delete-booking="${escapeHtml(item.id)}"` : `data-delete-order="${escapeHtml(item.id)}"`}>Xoá hẳn</button>` : ""}
-    </div>
-  </article>`;
-}
-function renderDashboardFeed(orders, bookings){
-  const mixed = buildMixedItems(orders, bookings);
-  
-    bindActions();
-const counts = {
-    new: mixed.filter(x => normalizedStatus(x)==="new").length,
-    confirmed: mixed.filter(x => normalizedStatus(x)==="confirmed").length,
-    done: mixed.filter(x => normalizedStatus(x)==="done").length,
-    cancelled: mixed.filter(x => normalizedStatus(x)==="cancelled").length
-  };
-
-  const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
-  setText("#countNew", counts.new);
-  setText("#countConfirmed", counts.confirmed);
-  setText("#countDone", counts.done);
-  setText("#countCancelled", counts.cancelled);
-
-  const newOrders = (orders || []).filter(x => x.status === "new").length;
-  const newBookings = (bookings || []).filter(x => x.status === "new").length;
-  setText("#statNewOrders", newOrders);
-  setText("#statNewBookings", newBookings);
-  setText("#statNew", newOrders + newBookings);
-
-  let list = mixed.filter(x => normalizedStatus(x) === currentStatusFilter);
-  if (currentKindFilter !== "all") list = list.filter(x => itemKind(x) === currentKindFilter);
-  if (currentStatusFilter === "new") list = list.filter(x => x.status === "new");
-
-  const titleMap = {new:"Đơn chờ xác nhận",confirmed:"Đơn đã xác nhận",done:"Đơn hoàn thành",cancelled:"Đơn đã hủy"};
-  const kindMap = {all:"Tất cả",bookings:"Đơn đặt bàn",orders:"Đơn ship"};
-  const title = document.querySelector("#dashboardPanel h2");
-  if (title) title.textContent = `${titleMap[currentStatusFilter] || "Dashboard"} • ${kindMap[currentKindFilter] || "Tất cả"} (${list.length})`;
-
-  const box = $("#dashboardList");
-  if (box) {
-    box.innerHTML = list.length ? list.slice(0,80).map(renderAppOrderCard).join("") : `<p class="muted empty-state">Không có đơn trong mục này.</p>`;
-  }
-  bindActions();
-  bindSessionActions();
-}
-function openDrawer(){
-  document.body.classList.add("drawer-open");
-}
-function closeDrawer(){
-  document.body.classList.remove("drawer-open");
-}
-function showPanel(tab){
-  ["dashboard","orders","bookings","tables","sessions","menu","inventory","analytics","settings"].forEach(name=>$(`#${name}Panel`)?.classList.toggle("hidden", name !== tab));
-  $$(".tab-btn").forEach(x=>x.classList.toggle("active", x.dataset.tab === tab));
-  if(tab === "analytics") loadAnalytics(currentRange);
-  closeDrawer();
-}
-function setStatusFilter(status){
-  currentStatusFilter = status || "new";
-  $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
-  showPanel("dashboard");
-  loadDashboard(); bindActions();}
-
-
-function isOrderConfirmedStatus(s){
-  return ["processing","delivering","confirmed"].includes(String(s || ""));
-}
-function normalizedStatus(item){
-  const s = String(item.status || "new");
-  if (s === "done") return "done";
-  if (s === "cancelled") return "cancelled";
-  if (isOrderConfirmedStatus(s)) return "confirmed";
-  return "new";
-}
-function newestFirst(a,b){
-  const av = Number(a.createdAtMs || a.arrivalMs || a.createdAt?.seconds || 0);
-  const bv = Number(b.createdAtMs || b.arrivalMs || b.createdAt?.seconds || 0);
-  return bv - av;
-}
-function itemKind(item){
-  return item.__kind || item.kind || item.type || "";
-}
-function mixedItems(orders, bookings){
-  return [
-    ...(orders || []).map(x => ({...x, __kind:"orders"})),
-    ...(bookings || []).map(x => ({...x, __kind:"bookings"}))
-  ].sort(newestFirst);
-}
-function renderMiniOrderCard(item){
-  const kind = itemKind(item);
-  const status = normalizedStatus(item);
-  const isBooking = kind === "bookings";
-  const title = isBooking ? "Đặt bàn" : "Đơn ship";
-  const codeText = escapeHtml(isBooking ? (item.bookingCode || item.id) : (item.orderCode || item.id));
-  const name = escapeHtml(isBooking ? (item.name || "") : (item.customer?.name || ""));
-  const phone = escapeHtml(isBooking ? (item.phone || "") : (item.customer?.phone || ""));
-  const addressOrTable = isBooking
-    ? `Bàn ${escapeHtml(item.table || "")} • ${escapeHtml(item.guests || "")} người`
-    : escapeHtml(item.customer?.address || "");
-  const timeLine = isBooking
-    ? `${escapeHtml(item.date || "")} • ${escapeHtml(item.time || "")}`
-    : `${money(item.total || 0)}${item.shippingFee ? " • Ship: " + money(item.shippingFee) : ""}`;
-  const icon = isBooking ? "🪑" : "🚚";
-  const statusBadge = status === "new" ? "MỚI" : getStatusLabel(item.status);
-
-  return `<article class="admin-card dashboard-order-card ${isBooking ? "booking-card" : "ship-card"}">
-    <div class="dash-order-top">
-      <div class="dash-order-title"><span class="dash-icon">${icon}</span><b>${title}</b><span>•</span><em>${codeText}</em></div>
-      <span class="status status-${escapeHtml(item.status || "new")}">${escapeHtml(statusBadge)}</span>
-    </div>
-    <div class="dash-order-main">
-      <div class="dash-order-info">
-        ${isBooking ? `<p>📅 ${timeLine}</p><p>👥 ${addressOrTable}</p>` : `<p>📍 ${addressOrTable}</p><p>💰 ${timeLine}</p>`}
-        <p>👤 ${name}</p>
-        <p>☎ ${phone}</p>
-      </div>
-      ${renderDashboardItemsBox(item)}
-    </div>
-    <div class="admin-actions dash-actions">
-      ${status === "new" ? `<button class="action-btn action-confirm" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="${isBooking ? "confirmed" : "processing"}">Xác nhận</button>` : ""}
-      ${status === "confirmed" && !isBooking ? `<button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="delivering">Đang giao</button><button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="done">Hoàn thành</button>` : ""}
-      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button><button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
-      ${status !== "done" && status !== "cancelled" ? `<button class="action-btn action-cancel" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="cancelled">Hủy</button>` : ""}
-      ${status === "done" || status === "cancelled" ? `<button class="action-btn action-delete" ${isBooking ? `data-delete-booking="${escapeHtml(item.id)}"` : `data-delete-order="${escapeHtml(item.id)}"`}>Xoá hẳn</button>` : ""}
-    </div>
-  </article>`;
-}
-function renderDashboardFeed(orders, bookings){
-  const all = mixedItems(orders, bookings);
-  const counts = {
-    new: all.filter(x => normalizedStatus(x)==="new").length,
-    confirmed: all.filter(x => normalizedStatus(x)==="confirmed").length,
-    done: all.filter(x => normalizedStatus(x)==="done").length,
-    cancelled: all.filter(x => normalizedStatus(x)==="cancelled").length
-  };
-  $("#countNew").textContent = counts.new;
-  $("#countConfirmed").textContent = counts.confirmed;
-  $("#countDone").textContent = counts.done;
-  $("#countCancelled").textContent = counts.cancelled;
-
-  let list = all.filter(x => normalizedStatus(x) === currentStatusFilter);
-  if (currentKindFilter !== "all") list = list.filter(x => itemKind(x) === currentKindFilter);
-  if (currentStatusFilter === "new") list = list.filter(x => x.status === "new");
-
-  $("#dashboardList").innerHTML = list.length
-    ? list.slice(0, 60).map(renderMiniOrderCard).join("")
-    : `<p class="muted empty-state">Không có đơn trong mục này.</p>`;
-
-  bindActions();
-  bindSessionActions();
-}
-
-
-function showDashboard(){
-  $("#pinScreen").classList.add("hidden");
-  $("#dashboard").classList.remove("hidden");
-  setDefaultDateTime();
-  loadDashboard(); bindActions();startAutoRefresh();
-}
-function showPin(){
-  $("#dashboard").classList.add("hidden");
-  $("#pinScreen").classList.remove("hidden");
-}
-function setDefaultDateTime(){
-  const d=$("#tableDateFilter"), t=$("#tableTimeFilter");
-  if(d && !d.value) d.value = new Date().toISOString().slice(0,10);
-  if(t && !t.value) t.value = new Date().toTimeString().slice(0,5);
-  const y=$("#archiveYearInput");
-  if(y && !y.value) y.value = new Date().getFullYear() - 1;
-}
-function startAutoRefresh(){
-  clearInterval(autoRefreshTimer);
-  autoRefreshTimer=setInterval(()=>{ if(pin && !document.hidden) loadDashboard({silent:true}); },2000);
-}
-function showNewNotice(message){
-  toast(message);
-  document.body.classList.add("new-order-flash");
-  setTimeout(()=>document.body.classList.remove("new-order-flash"),900);
-}
-
-async function loadDashboard(){
-  try{
-    const [orders,bookings,menu,tables,inventory,sessions,settings] = await Promise.all([
-      api("/api/orders"),
-      api("/api/bookings"),
-      api("/api/menu?admin=1"),
-      api(`/api/tables?admin=1&date=${encodeURIComponent($("#tableDateFilter")?.value||"")}&time=${encodeURIComponent($("#tableTimeFilter")?.value||"")}`),
-      api("/api/inventory"),
-      api("/api/sessions"),
-      api("/api/settings")
-    ]);
-
-    const orderItems=orders.items||[], bookingItems=bookings.items||[];
-    if(firstLoadDone){
-      if(orderItems.length > lastOrderCount) showNewNotice(`Có ${orderItems.length-lastOrderCount} đơn ship mới`);
-      if(bookingItems.length > lastBookingCount) showNewNotice(`Có ${bookingItems.length-lastBookingCount} đặt bàn mới`);
-    }
-    lastOrderCount=orderItems.length; lastBookingCount=bookingItems.length; firstLoadDone=true;
-
-    menuCache=menu.items||[];
-    tableCache=tables.items||[];
-    inventoryCache=inventory.items||[];
-    sessionCache=sessions.items||[];
-    settingsCache=settings.settings||{};
-
-    const newOrders = orderItems.filter(x=>x.status==="new");
-    const newBookings = bookingItems.filter(x=>x.status==="new");
-    $("#statNewOrders").textContent = newOrders.length;
-    $("#statNewBookings").textContent = newBookings.length;
-    $("#statNew").textContent = newOrders.length + newBookings.length;
-
-    renderDashboardFeed(orderItems, bookingItems);
-    renderOrders(orderItems);
-    renderBookings(bookingItems);
-    renderMenuAdmin(menuCache);
-    renderTables(tableCache);
-    renderInventory(inventoryCache);
-    renderSessions(sessionCache);
-    fillSettingsForm();
-    loadAnalytics(currentRange);
-
-    const hint=$("#refreshHint");
-    if(hint) hint.textContent=`Tự cập nhật: ${new Date().toLocaleTimeString("vi-VN")}`;
-  }catch(err){
-    console.error(err);
-    toast(err.message,"error");
-    if(err.message.includes("PIN")){ sessionStorage.removeItem("ADMIN_PIN"); pin=""; showPin(); }
-  }
-}
-
-function renderOrders(items){
-  const visible = items.filter(order => order.status !== "done" && order.status !== "cancelled");
-  $("#ordersList").innerHTML = visible.length ? visible.map(order=>{
-    const orderItems = Array.isArray(order.items) ? order.items : [];
-    const lines=orderItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ");
-    const itemsTotal = orderItems.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0);
-    const itemsBox = orderItems.length ? `<div class="admin-numbered-items-box">
-      <div class="numbered-items-title">🍽️ Món trong đơn <span>(${orderItems.reduce((sum,i)=>sum+Number(i.qty||1),0)} món)</span></div>
-      <div class="numbered-items-list">
-        ${orderItems.map((i,index)=>`<div class="numbered-items-row">
-          <b class="item-no">${index+1}</b>
-          <span class="item-name">${escapeHtml(i.name||"Món")}</span>
-          <em class="item-qty">x${Number(i.qty||1)}</em>
-          <strong class="item-price">${money(Number(i.price||0)*Number(i.qty||1))}</strong>
-        </div>`).join("")}
-      </div>
-      <div class="numbered-items-total"><span>Tạm tính món:</span><b>${money(itemsTotal)}</b></div>
-    </div>` : "";
-    return `<article class="admin-card compact-card">
-      <div class="compact-main">
-        <div><div class="admin-code">${escapeHtml(order.orderCode||order.id)}</div><p><b>${escapeHtml(order.customer?.name||"")}</b> • ${escapeHtml(order.customer?.phone||"")}</p><p class="muted">${lines}</p></div>
-        <div><span class="status status-${escapeHtml(order.status||"new")}">${getStatusLabel(order.status)}</span><b class="compact-money">${money(order.total)}</b></div>
-      </div>
-      <p class="muted">${escapeHtml(order.customer?.address||"")} — Ship: ${money(order.shippingFee||0)} — ${escapeHtml(order.customer?.note||"Không ghi chú")}</p>
-      ${itemsBox}
-      <div class="admin-actions">
-        <button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="processing">Đang xử lý</button>
-        <button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="done">Hoàn thành</button>
-        <button class="action-btn action-cancel" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="cancelled">Hủy</button>
-        <button class="action-btn action-confirm" data-ship-edit="${escapeHtml(order.id)}" data-fee="${Number(order.shippingFee||0)}">Sửa ship</button>
-        <button class="action-btn action-delete" data-delete-order="${escapeHtml(order.id)}">Xoá hẳn</button>
-      </div>
-    </article>`;
-  }).join("") : `<p class="muted">Không có đơn ship đang xử lý.</p>`;
-  bindActions(); bindDeleteActions(); bindShipActions();
-}
-function renderBookings(items){
-  const visible = items.filter(b => b.status !== "done" && b.status !== "cancelled");
-  $("#bookingsList").innerHTML = visible.length ? visible.map(b=>{
-    const preorderItems = Array.isArray(b.preorderItems) ? b.preorderItems : [];
-    const preTotal = b.preorderSubtotal || preorderItems.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0);
-    const preText = preorderItems.length ? preorderItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ") + ` • ${money(preTotal)}` : "Không có";
-    const preorderBox = preorderItems.length ? `<div class="admin-numbered-items-box">
-      <div class="numbered-items-title">🍽️ Món đặt trước <span>(${preorderItems.reduce((sum,i)=>sum+Number(i.qty||1),0)} món)</span></div>
-      <div class="numbered-items-list">
-        ${preorderItems.map((i,index)=>`<div class="numbered-items-row">
-          <b class="item-no">${index+1}</b>
-          <span class="item-name">${escapeHtml(i.name||"Món")}</span>
-          <em class="item-qty">x${Number(i.qty||1)}</em>
-          <strong class="item-price">${money(Number(i.price||0)*Number(i.qty||1))}</strong>
-        </div>`).join("")}
-      </div>
-      <div class="numbered-items-total"><span>Tạm tính món:</span><b>${money(preTotal)}</b></div>
-    </div>` : `<div class="admin-numbered-items-box empty"><div class="numbered-items-title">🍽️ Món đặt trước</div><p class="muted">Không có món đặt kèm.</p></div>`;
-    const session = b.sessionId ? sessionCache.find(s=>String(s.id)===String(b.sessionId)) : null;
-    const sessionStatus = session?.status || "";
-    const sessionIsOpen = !!session && sessionStatus === "open" && b.status !== "done" && b.status !== "cancelled";
-    const sessionIsClosed = !!session && (sessionStatus === "closed" || b.status === "done");
-    const sessionTotal = session ? money(Number(session.total || 0)) : "";
-    const canConfirm = !b.sessionId && b.status === "new";
-    const canCancel = b.status !== "done" && b.status !== "cancelled" && !sessionIsClosed;
-
-    return `<article class="admin-card booking-row-card ${sessionIsClosed ? "booking-closed" : ""}">
-      <div class="booking-grid">
-        <div><span>Tên khách</span><b>${escapeHtml(b.name||"")}</b></div>
-        <div><span>SĐT</span><b>${escapeHtml(b.phone||"")}</b></div>
-        <div><span>Giờ đặt</span><b>${escapeHtml(b.date||"")} ${escapeHtml(b.time||"")}</b><small>${b.lockStartText && b.lockEndText ? `Khóa: ${escapeHtml(b.lockStartText)} → ${escapeHtml(b.lockEndText)}` : "Chưa khóa bàn"}</small></div>
-        <div><span>Số người</span><b>${escapeHtml(b.guests||"")}</b></div>
-        <div><span>Bàn</span><b>${escapeHtml(b.table||"")}</b></div>
-        <div><span>Trạng thái</span><b class="status status-${escapeHtml(b.status||"new")}">${sessionIsClosed ? "Đã thanh toán / đóng phiên" : getStatusLabel(b.status)}</b></div>
-      </div>
-      <p class="muted"><b>Ghi chú:</b> ${escapeHtml(b.note||"Không có")}</p>
-      ${preorderBox}
-      ${b.sessionId ? `<p class="muted"><b>Phiên bàn:</b> ${escapeHtml(b.sessionCode || b.sessionId)} ${sessionTotal ? `• Tổng hiện tại: <b>${sessionTotal}</b>` : ""} ${sessionStatus ? `• Trạng thái phiên: <b>${sessionStatus === "open" ? "Đang mở" : "Đã đóng"}</b>` : ""}</p>` : ""}
-      <div class="admin-actions">
-        ${canConfirm ? `<button class="action-btn action-confirm" data-type="bookings" data-id="${escapeHtml(b.id)}" data-status="confirmed">Xác nhận & tạo phiên bàn</button>` : ""}
-        ${sessionIsOpen ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(b.sessionId)}" data-session-table="${escapeHtml(b.table||"")}">+ Thêm món</button>
-        <button class="action-btn action-done" data-session-close="${escapeHtml(b.sessionId)}">Thanh toán / Hoàn thành</button>` : ""}
-        ${sessionIsClosed ? `<span class="status status-done">Đã đóng đơn, không thể thêm món</span>` : ""}
-        ${canCancel ? `<button class="action-btn action-cancel" data-type="bookings" data-id="${escapeHtml(b.id)}" data-status="cancelled">Hủy</button>` : ""}
-        <button class="action-btn action-delete" data-delete-booking="${escapeHtml(b.id)}">Xoá hẳn</button>
-      </div>
-    </article>`;
-  }).join("") : `<p class="muted">Không có đặt bàn đang xử lý.</p>`;
-  bindActions(); bindDeleteActions(); bindSessionActions();
-}
-function renderTables(items){
-  tableCache=items;
-  $$(".admin-table-node").forEach(node=>{
-    const t=items.find(x=>x.id===node.dataset.adminTable);
-    const status=t?.locked ? "locked" : (t?.status || "free");
-    node.classList.remove("table-free","table-reserved","table-using","table-locked","table-cleaning","table-pending");
-    node.classList.add(`table-${status}`);
-    node.onclick=()=>openTableForm(t||{id:node.dataset.adminTable,name:node.dataset.adminTable,seats:4,status:"free",locked:false});
-  });
-  $("#tableDetail").innerHTML=items.map(t=>`<div class="table-mini-row"><b>${escapeHtml(t.id)}</b><span>${getStatusLabel(t.locked?"locked":t.status)}</span><small>${escapeHtml(t.zone||"")}</small></div>`).join("");
-}
-function renderSessions(items){
-  const open=items.filter(s=>s.status==="open");
-  $("#sessionsList").innerHTML=open.length ? open.map(s=>{
-    const sessionItems = Array.isArray(s.summaryItems) ? s.summaryItems : [];
-    const summary=sessionItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ");
-    const sessionItemsBox = sessionItems.length ? `<div class="admin-numbered-items-box compact">
-      <div class="numbered-items-title">🍽️ Món trong phiên <span>(${sessionItems.reduce((sum,i)=>sum+Number(i.qty||1),0)} món)</span></div>
-      ${sessionItems.map((i,index)=>`<div class="numbered-items-row">
-        <b class="item-no">${index+1}</b>
-        <span class="item-name">${escapeHtml(i.name||"Món")}</span>
-        <em class="item-qty">x${Number(i.qty||1)}</em>
-        <strong class="item-price">${money(Number(i.price||0)*Number(i.qty||1))}</strong>
-      </div>`).join("")}
-    </div>` : "";
-    const preorder = Number(s.preorderTotal || 0);
-    const extra = Number(s.extraTotal || 0);
-    return `<article class="admin-card compact-card">
-      <div class="compact-main">
-        <div>
-          <div class="admin-code">${escapeHtml(s.sessionCode || s.id)}</div>
-          <p><b>Bàn ${escapeHtml((s.tables||[]).join("+"))}</b> • ${escapeHtml(s.customerName||"Khách tại bàn")}</p>
-          <p class="muted">${summary || "Chưa gọi món"}</p>
-          ${sessionItemsBox}
-          <p class="muted">Đặt trước: <b>${money(preorder)}</b> • Gọi thêm: <b>${money(extra)}</b></p>
-        </div>
-        <div><span class="status status-processing">Đang dùng</span><b class="compact-money">${money(s.total||0)}</b></div>
-      </div>
-      <p class="muted">Lượt gọi: ${(s.calls||[]).length} • Mở lúc: ${escapeHtml(s.openedAtText||"")} ${s.lockStartText && s.lockEndText ? `• Khóa: ${escapeHtml(s.lockStartText)} → ${escapeHtml(s.lockEndText)}` : ""}</p>
-      <div class="admin-actions">
-        <button class="action-btn action-confirm" data-session-add-items="${escapeHtml(s.id)}" data-session-table="${escapeHtml((s.tables||[])[0]||"")}">+ Thêm món</button>
-        <button class="action-btn action-confirm" data-session-move="${escapeHtml(s.id)}">Chuyển / merge</button>
-        <button class="action-btn action-done" data-session-close="${escapeHtml(s.id)}">Thanh toán / Hoàn thành</button>
-      </div>
-    </article>`;
-  }).join("") : `<p class="muted">Chưa có phiên bàn đang mở.</p>`;
-  bindSessionActions();
-}
-function renderMenuAdmin(items){
-  $("#menuAdminList").innerHTML=items.length ? `<div class="admin-compact-list menu-compact-list">
-    ${items.map(item=>`<article class="admin-mini-card menu-mini-card">
-      <div class="mini-main">
-        <div class="mini-title"><b>${escapeHtml(item.icon||"🍽️")} ${escapeHtml(item.name||"")}</b><small>${escapeHtml(item.id)}</small></div>
-        <div class="mini-meta">
-          <span>${escapeHtml(getCategoryLabel(item.category))}</span>
-          <span>Gốc: <b>${money(item.originalPrice)}</b></span>
-          <span>Bán: <b>${money(item.price)}</b></span>
-          <span>Lãi: <b class="${Number(item.profit||0)>=0?"good":"bad"}">${money(item.profit)}</b></span>
-          <span><b class="status ${item.available===false?"status-cancelled":"status-done"}">${item.available===false?"Ẩn":"Đang bán"}</b></span>
-        </div>
-      </div>
-      <div class="mini-actions">
-        <button data-menu-edit="${escapeHtml(item.id)}">Sửa</button>
-        <button data-menu-delete="${escapeHtml(item.id)}">Xoá</button>
-      </div>
-    </article>`).join("")}
-  </div>` : `<p class="muted">Chưa có món.</p>`;
-  bindMenuActions(items);
-}
-function renderInventory(items){
-  $("#inventoryList").innerHTML=items.length ? `<div class="admin-compact-list inventory-compact-list">
-    ${items.map(item=>`<article class="admin-mini-card inventory-mini-card ${item.low?"low-stock":""}">
-      <div class="mini-main">
-        <div class="mini-title"><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.note||"")}</small></div>
-        <div class="mini-meta">
-          <span>Tồn: <b>${item.stock} ${escapeHtml(item.unit||"")}</b></span>
-          <span>${item.low?'<b class="bad">Sắp hết</b>':'<b class="good">Ổn</b>'} <small>Min: ${item.minStock}</small></span>
-          <span>Nhập: <b>${item.lastImportQty||0} ${escapeHtml(item.unit||"")}</b></span>
-          <span>${money(item.lastImportPrice||0)} ${item.lastImportDate?`• ${escapeHtml(item.lastImportDate)}`:""}</span>
-          <span>NCC: ${escapeHtml(item.supplier||"")}</span>
-        </div>
-      </div>
-      <div class="mini-actions">
-        <button data-inv-edit="${escapeHtml(item.id)}">Sửa</button>
-        <button data-inv-delete="${escapeHtml(item.id)}">Xoá</button>
-      </div>
-    </article>`).join("")}
-  </div>` : `<p class="muted">Chưa có nguyên liệu.</p>`;
-  bindInventoryActions(items);
-}
-async function loadAnalytics(range=currentRange){
-  currentRange=range;
-  try{ renderAnalytics(await api(`/api/analytics?range=${encodeURIComponent(range)}`)); }catch(e){ toast(e.message,"error"); }
-}
-function renderAnalytics(data){
-  const s=data.summary||{};
-  $("#reportRevenue").textContent=money(s.revenue||0);
-  $("#reportCost").textContent=money(s.cost||0);
-  $("#reportProfit").textContent=money(s.profit||0);
-  $("#reportCompleted").textContent=s.completedOrders||0;
-  $("#analyticsDetail").innerHTML=`
-    <article><span>Tổng đơn</span><b>${s.orders||0}</b></article><article><span>Đơn ship</span><b>${s.shipOrders||0}</b></article>
-    <article><span>Đơn tại bàn</span><b>${s.tableOrders||0}</b></article><article><span>Đơn huỷ</span><b>${s.cancelledOrders||0}</b></article>
-    <article><span>Tiền ship</span><b>${money(s.shippingFee||0)}</b></article><article><span>Sản phẩm bán</span><b>${s.itemsSold||0}</b></article>
-    <article><span>Khách có SĐT</span><b>${s.customers||0}</b></article><article><span>TB/đơn</span><b>${money(s.averageOrder||0)}</b></article>`;
-  const rows=data.byDate||[];
-  const max=Math.max(1,...rows.map(r=>Math.max(Number(r.revenue||0),Math.abs(Number(r.profit||0)))));
-  $("#revenueChart").innerHTML=rows.length ? rows.map(r=>`<div class="chart-day"><div class="bars"><div class="bar revenue-bar" style="height:${Math.max(8,Math.round((r.revenue/max)*170))}px"></div><div class="bar ${r.profit>=0?"profit-bar":"loss-bar"}" style="height:${Math.max(8,Math.round((Math.abs(r.profit)/max)*170))}px"></div></div><small>${escapeHtml(r.date.slice(5))}</small></div>`).join("") : `<p class="muted">Chưa có dữ liệu.</p>`;
-  const hrs=data.byHour||[];
-  const hmax=Math.max(1,...hrs.map(h=>h.revenue||0));
-  $("#hourChart").innerHTML=`<div class="chart-head"><h3>Doanh thu theo giờ</h3><p class="muted">Nhận diện giờ cao điểm</p></div>` + (hrs.length ? hrs.map(h=>`<div class="hour-row"><span>${escapeHtml(h.hour)}</span><i style="width:${Math.max(4,Math.round((h.revenue/hmax)*100))}%"></i><b>${money(h.revenue)} • ${h.orders} đơn</b></div>`).join("") : `<p class="muted">Chưa có dữ liệu.</p>`);
-  $("#topItemsList").innerHTML=(data.topItems||[]).length ? (data.topItems||[]).map(i=>`<article class="top-item"><div><b>${escapeHtml(i.name)}</b><span>Đã bán: ${i.qty}</span></div><div><span>Doanh thu</span><b>${money(i.revenue)}</b></div><div><span>Giá vốn</span><b>${money(i.cost)}</b></div><div><span>Lãi</span><b class="${i.profit>=0?"good":"bad"}">${money(i.profit)}</b></div></article>`).join("") : `<p class="muted">Chưa có món phát sinh doanh thu.</p>`;
-}
-
-function updateCropPreview(){
-  const f=$("#menuForm"), img=$("#cropPreviewImg");
-  if(!f || !img) return;
-  const zoom=Number($("#cropZoom").value||100), x=Number($("#cropX").value||50), y=Number($("#cropY").value||50);
-  f.imageZoom.value=zoom; f.imagePosX.value=x; f.imagePosY.value=y;
-  if(f.imageFit.value!=="contain-dark" && f.imageFit.value!=="contain-light") f.imageFit.value="custom-crop";
-  img.src=f.imageUrl.value.trim()||"";
-  img.className=f.imageFit.value||"custom-crop";
-  img.style.setProperty("--img-zoom", zoom/100);
-  img.style.setProperty("--img-x", x+"%");
-  img.style.setProperty("--img-y", y+"%");
-}
-function resetCropPreview(){ $("#cropZoom").value=100; $("#cropX").value=50; $("#cropY").value=50; $("#menuForm").imageFit.value="custom-crop"; updateCropPreview(); }
-function openMenuForm(item=null){
-  const f=$("#menuForm"); f.reset();
-  $("#menuModalTitle").textContent=item?"Sửa món":"Thêm món";
-  $("#menuIdInput").value=item?.id||"";
-  f.name.value=item?.name||""; f.originalPrice.value=item?.originalPrice??""; f.price.value=item?.price??"";
-  f.category.value=item?.category||"main"; f.popular.value=item?.popular??50; f.icon.value=item?.icon||"";
-  f.imageUrl.value=item?.imageUrl||""; f.imageFit.value=item?.imageFit||"custom-crop";
-  f.imageZoom.value=item?.imageZoom??100; f.imagePosX.value=item?.imagePosX??50; f.imagePosY.value=item?.imagePosY??50;
-  $("#cropZoom").value=f.imageZoom.value; $("#cropX").value=f.imagePosX.value; $("#cropY").value=f.imagePosY.value;
-  f.desc.value=item?.desc||""; f.tags.value=Array.isArray(item?.tags)?item.tags.join(", "):""; f.available.value=item?.available===false?"false":"true";
-  $("#menuModal").classList.add("show"); setTimeout(updateCropPreview,0);
-}
-function openInventoryForm(item=null){
-  const f=$("#inventoryForm"); f.reset();
-  $("#inventoryModalTitle").textContent=item?"Sửa nguyên liệu":"Thêm nguyên liệu";
-  $("#inventoryIdInput").value=item?.id||""; f.name.value=item?.name||""; f.unit.value=item?.unit||"kg"; f.stock.value=item?.stock??""; f.minStock.value=item?.minStock??""; f.supplier.value=item?.supplier||""; f.lastImportQty.value=item?.lastImportQty??""; f.lastImportPrice.value=item?.lastImportPrice??""; f.lastImportDate.value=item?.lastImportDate||""; f.note.value=item?.note||"";
-  $("#inventoryModal").classList.add("show");
-}
-function openTableForm(t){
-  const f=$("#tableForm"); f.reset();
-  $("#tableIdInput").value=t.id; $("#tableModalTitle").textContent=`Quản lý bàn ${t.id}`;
-  f.name.value=t.name||t.id; f.seats.value=t.seats||4; f.zone.value=t.zone||""; f.status.value=t.locked?"locked":(t.status||"free"); f.locked.value=t.locked?"true":"false"; f.note.value=t.note||"";
-  $("#tableModal").classList.add("show");
-}
-function fillSettingsForm(){ const f=$("#settingsForm"); if(!f) return; f.shopName.value=settingsCache.shopName||""; f.shippingFee.value=settingsCache.shippingFee??15000; f.freeShipFrom.value=settingsCache.freeShipFrom??0; }
-
-function bindActions(){
-  $$(".action-btn[data-type]").forEach(btn=>btn.onclick=()=>{
-    const label = getStatusLabel(btn.dataset.status, btn.textContent.trim());
-    confirmJob = async () => {
-      const payload = { type: btn.dataset.type, id: btn.dataset.id, status: btn.dataset.status };
-      if (!payload.type || !payload.id || !payload.status) throw new Error("Thiếu dữ liệu nút xác nhận");
-      await api("/api/status", { method: "POST", body: JSON.stringify(payload) });
-      toast(`Đã cập nhật: ${label}`);
-      await loadDashboard(); bindActions();};
-    $("#confirmTitle").textContent="Xác nhận cập nhật"; $("#confirmMessage").textContent=`Chuyển trạng thái sang “${label}”?`; $("#confirmModal").classList.add("show");
-  });
-}
-function bindDeleteActions(){
-  $$("[data-delete-order]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/orders?id=${encodeURIComponent(btn.dataset.deleteOrder)}`,{method:"DELETE"}); toast("Đã xoá đơn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá hẳn đơn"; $("#confirmMessage").textContent="Không thể hoàn tác."; $("#confirmModal").classList.add("show"); });
-  $$("[data-delete-booking]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/bookings?id=${encodeURIComponent(btn.dataset.deleteBooking)}`,{method:"DELETE"}); toast("Đã xoá lịch đặt bàn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá hẳn đặt bàn"; $("#confirmMessage").textContent="Không thể hoàn tác."; $("#confirmModal").classList.add("show"); });
-}
-function bindShipActions(){ $$("[data-ship-edit]").forEach(btn=>btn.onclick=()=>{ $("#shipForm").reset(); $("#shipOrderId").value=btn.dataset.shipEdit; $("#shipForm").shippingFee.value=btn.dataset.fee||0; $("#shipModal").classList.add("show"); }); }
-function bindMenuActions(items){
-  $$("[data-menu-edit]").forEach(btn=>btn.onclick=()=>openMenuForm(items.find(x=>String(x.id)===String(btn.dataset.menuEdit))));
-  $$("[data-menu-delete]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/menu?id=${encodeURIComponent(btn.dataset.menuDelete)}`,{method:"DELETE"}); toast("Đã xoá món"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá món"; $("#confirmMessage").textContent="Bạn chắc chắn muốn xoá món?"; $("#confirmModal").classList.add("show"); });
-}
-function bindInventoryActions(items){
-  $$("[data-inv-edit]").forEach(btn=>btn.onclick=()=>openInventoryForm(items.find(x=>String(x.id)===String(btn.dataset.invEdit))));
-  $$("[data-inv-delete]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/inventory?id=${encodeURIComponent(btn.dataset.invDelete)}`,{method:"DELETE"}); toast("Đã xoá nguyên liệu"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá nguyên liệu"; $("#confirmMessage").textContent="Bạn chắc chắn?"; $("#confirmModal").classList.add("show"); });
-}
-function ensureSessionMenuModal(){
-  if ($("#sessionMenuModal")) return;
-  const wrap = document.createElement("div");
-  wrap.id = "sessionMenuModal";
-  wrap.className = "modal";
-  wrap.innerHTML = `
-    <div class="modal-card wide-modal">
-      <div class="modal-head">
-        <div>
-          <p class="eyebrow">Gộp món vào phiên bàn</p>
-          <h2 id="sessionMenuTitle">+ Thêm món</h2>
-          <p class="muted" id="sessionMenuHint">Chọn món khách gọi thêm tại bàn.</p>
-        </div>
-        <button id="sessionMenuCloseBtn" class="session-menu-close modal-close" type="button" aria-label="Đóng">✕</button>
-      </div>
-      <div class="session-menu-layout">
-        <div>
-          <input id="sessionMenuSearch" placeholder="Tìm món..." />
-          <div id="sessionMenuGrid" class="session-menu-grid"></div>
-        </div>
-        <form id="sessionAddItemsForm" class="session-cart-box">
-          <input type="hidden" name="sessionId" id="sessionAddSessionId">
-          <input type="hidden" name="table" id="sessionAddTable">
-          <h3>Món gọi thêm</h3>
-          <div id="sessionCartList" class="session-cart-list"></div>
-          <label>Ghi chú
-            <textarea name="note" placeholder="Ví dụ: ít cay, làm sau 10 phút..."></textarea>
-          </label>
-          <button class="btn primary full" type="submit">Gộp món vào bàn</button>
-        </form>
-      </div>
-    </div>`;
-  document.body.appendChild(wrap);
-
-  $("#sessionMenuSearch").oninput = renderSessionMenuGrid;
-  $("#sessionAddItemsForm").onsubmit = submitSessionAddItems;
-}
-let sessionAddCart = [];
-
-function openSessionMenuModal(sessionId, table){
-  ensureSessionMenuModal();
-  sessionAddCart = [];
-  $("#sessionAddSessionId").value = sessionId || "";
-  $("#sessionAddTable").value = table || "";
-  $("#sessionMenuTitle").textContent = `+ Thêm món ${table ? "bàn " + table : ""}`;
-  renderSessionMenuGrid();
-  renderSessionAddCart();
-  (() => {
-    const modal = document.getElementById("sessionMenuModal");
-    if (modal) {
-      modal.style.display = "";
-      modal.removeAttribute("aria-hidden");
-      modal.classList.add("show");
-    }
-  })();
-}
-
-function renderSessionMenuGrid(){
-  const q = ($("#sessionMenuSearch")?.value || "").trim().toLowerCase();
-  const list = menuCache.filter(item => item.available !== false && String(item.name || "").toLowerCase().includes(q));
-  $("#sessionMenuGrid").innerHTML = list.length ? list.map(item=>`
-    <button type="button" class="session-food-card" data-add-session-food="${escapeHtml(item.id)}">
-      <b>${escapeHtml(item.icon || "🍽️")} ${escapeHtml(item.name || "")}</b>
-      <span>${money(item.price || 0)}</span>
-    </button>
-  `).join("") : `<p class="muted">Không có món phù hợp.</p>`;
-  $$("[data-add-session-food]").forEach(btn=>btn.onclick=()=>{
-    const item = menuCache.find(x=>String(x.id)===String(btn.dataset.addSessionFood));
-    if(!item) return;
-    const old = sessionAddCart.find(x=>String(x.id)===String(item.id));
-    if(old) old.qty += 1;
-    else sessionAddCart.push({ id:item.id, name:item.name, price:Number(item.price||0), qty:1 });
-    renderSessionAddCart();
-  });
-}
-
-function renderSessionAddCart(){
-  const total = sessionAddCart.reduce((s,i)=>s+Number(i.price||0)*Number(i.qty||1),0);
-  $("#sessionCartList").innerHTML = sessionAddCart.length ? sessionAddCart.map(item=>`
-    <div class="session-cart-row">
-      <div><b>${escapeHtml(item.name)}</b><small>${money(item.price)} x ${item.qty}</small></div>
-      <div>
-        <button type="button" data-session-cart-minus="${escapeHtml(item.id)}">−</button>
-        <button type="button" data-session-cart-plus="${escapeHtml(item.id)}">+</button>
-      </div>
-    </div>
-  `).join("") + `<div class="session-cart-total">Tổng gọi thêm: <b>${money(total)}</b></div>` : `<p class="muted">Chưa chọn món.</p>`;
-  $$("[data-session-cart-minus]").forEach(btn=>btn.onclick=()=>{
-    const it=sessionAddCart.find(x=>String(x.id)===String(btn.dataset.sessionCartMinus));
-    if(!it) return;
-    it.qty-=1;
-    sessionAddCart=sessionAddCart.filter(x=>x.qty>0);
-    renderSessionAddCart();
-  });
-  $$("[data-session-cart-plus]").forEach(btn=>btn.onclick=()=>{
-    const it=sessionAddCart.find(x=>String(x.id)===String(btn.dataset.sessionCartPlus));
-    if(!it) return;
-    it.qty+=1;
-    renderSessionAddCart();
-  });
-}
-
-async function submitSessionAddItems(e){
-  e.preventDefault();
-  if(!sessionAddCart.length){ toast("Chưa chọn món gọi thêm","error"); return; }
-  const data = Object.fromEntries(new FormData(e.target).entries());
-  try{
-    const result = await api("/api/sessions",{
-      method:"POST",
-      body:JSON.stringify({
-        action:"addItems",
-        sessionId:data.sessionId,
-        table:String(data.table||"").toUpperCase().trim(),
-        note:data.note,
-        items:sessionAddCart
-      })
-    });
-    $("#sessionMenuModal").classList.remove("show");
-    toast(`Đã gộp món vào phiên ${result.sessionCode}`);
-    loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); }
-}
-
-function bindSessionActions(){
-  $$("[data-session-add-items]").forEach(btn=>btn.onclick=()=>openSessionMenuModal(btn.dataset.sessionAddItems, btn.dataset.sessionTable || ""));
-  $$("[data-session-close]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"close",id:btn.dataset.sessionClose})}); toast("Đã thanh toán phiên bàn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Thanh toán phiên bàn"; $("#confirmMessage").textContent="Thanh toán, đóng phiên bàn và khóa thêm món cho đơn này?"; $("#confirmModal").classList.add("show"); });
-  $$("[data-session-move]").forEach(btn=>btn.onclick=()=>{ $("#moveSessionForm").reset(); $("#moveSessionId").value=btn.dataset.sessionMove; $("#moveSessionModal").classList.add("show"); });
-}
-
-$("#pinForm").addEventListener("submit", async e=>{ e.preventDefault(); try{ pin=$("#pinInput").value.trim(); await api("/api/admin-check"); sessionStorage.setItem("ADMIN_PIN",pin); showDashboard(); }catch(err){ toast(err.message,"error"); } });
-$("#logoutBtn").addEventListener("click",()=>{ clearInterval(autoRefreshTimer); sessionStorage.removeItem("ADMIN_PIN"); pin=""; showPin(); });
-$("#refreshBtn").addEventListener("click",()=>loadDashboard());
-
-$("#drawerToggleBtn")?.addEventListener("click", openDrawer);
-$("#drawerCloseBtn")?.addEventListener("click", closeDrawer);
-$("#drawerBackdrop")?.addEventListener("click", closeDrawer);
-$$(".bottom-task").forEach(btn=>btn.addEventListener("click",()=>setStatusFilter(btn.dataset.statusFilter || "new")));
-$$(".view-mode").forEach(btn=>btn.addEventListener("click",()=>{
-  currentKindFilter = btn.dataset.kindFilter || "all";
-  $$(".view-mode").forEach(x=>x.classList.toggle("active", x.dataset.kindFilter === currentKindFilter));
-  showPanel("dashboard");
-  loadDashboard(); bindActions();}));
-$$("[data-jump-status]").forEach(card=>card.addEventListener("click",()=>{
-  currentStatusFilter = card.dataset.jumpStatus || "new";
-  currentKindFilter = card.dataset.jumpKind || "all";
-  $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
-  $$(".view-mode").forEach(x=>x.classList.toggle("active", x.dataset.kindFilter === currentKindFilter));
-  showPanel("dashboard");
-  loadDashboard(); bindActions();}));
-
-$$(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>showPanel(btn.dataset.tab || "dashboard")));
-$$(".range-btn").forEach(btn=>btn.addEventListener("click",()=>{ $$(".range-btn").forEach(x=>x.classList.remove("active")); btn.classList.add("active"); loadAnalytics(btn.dataset.range); }));
-$("#tableDateFilter")?.addEventListener("change",loadDashboard); $("#tableTimeFilter")?.addEventListener("change",loadDashboard);
-
-$("#addMenuBtn").addEventListener("click",()=>openMenuForm());
-$("#menuCancelBtn").addEventListener("click",()=>$("#menuModal").classList.remove("show"));
-$("#menuForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.originalPrice=Number(data.originalPrice||0); data.price=Number(data.price||0); data.popular=Number(data.popular||0); data.imageZoom=Number(data.imageZoom||100); data.imagePosX=Number(data.imagePosX??50); data.imagePosY=Number(data.imagePosY??50); data.available=data.available==="true"; try{ await api("/api/menu",{method:"POST",body:JSON.stringify(data)}); $("#menuModal").classList.remove("show"); toast("Đã lưu món"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
-$("#menuForm").imageUrl.addEventListener("input", updateCropPreview); $("#menuForm").imageFit.addEventListener("change", updateCropPreview); $("#cropZoom").addEventListener("input", updateCropPreview); $("#cropX").addEventListener("input", updateCropPreview); $("#cropY").addEventListener("input", updateCropPreview); $("#cropResetBtn").addEventListener("click", resetCropPreview);
-
-$("#addInventoryBtn").addEventListener("click",()=>openInventoryForm());
-$("#inventoryCancelBtn").addEventListener("click",()=>$("#inventoryModal").classList.remove("show"));
-$("#inventoryForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); ["stock","minStock","lastImportQty","lastImportPrice"].forEach(k=>data[k]=Number(data[k]||0)); try{ await api("/api/inventory",{method:"POST",body:JSON.stringify(data)}); $("#inventoryModal").classList.remove("show"); toast("Đã lưu nguyên liệu"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
-
-$("#tableCancelBtn").addEventListener("click",()=>$("#tableModal").classList.remove("show"));
-$("#tableForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.seats=Number(data.seats||4); data.locked=data.locked==="true"||data.status==="locked"; try{ await api("/api/tables",{method:"POST",body:JSON.stringify(data)}); $("#tableModal").classList.remove("show"); toast("Đã lưu bàn"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
-
-$("#openSessionBtn").addEventListener("click",()=>$("#sessionModal").classList.add("show"));
-$("#sessionCancelBtn").addEventListener("click",()=>$("#sessionModal").classList.remove("show"));
-$("#sessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.action="open"; data.table=String(data.table||"").toUpperCase().trim(); data.guests=Number(data.guests||1); try{ await api("/api/sessions",{method:"POST",body:JSON.stringify(data)}); $("#sessionModal").classList.remove("show"); toast("Đã mở phiên bàn"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
-$("#moveSessionCancelBtn").addEventListener("click",()=>$("#moveSessionModal").classList.remove("show"));
-$("#moveSessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); try{ if(data.toTable) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"move",id:data.id,toTable:String(data.toTable).toUpperCase().trim()})}); if(data.mergeTables) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"merge",id:data.id,tables:String(data.mergeTables).toUpperCase()})}); $("#moveSessionModal").classList.remove("show"); toast("Đã cập nhật phiên bàn"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
-
-$("#shipCancelBtn").addEventListener("click",()=>$("#shipModal").classList.remove("show"));
-$("#shipForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.id=$("#shipOrderId").value; data.shippingFee=Number(data.shippingFee||0); try{ await api("/api/orders",{method:"PUT",body:JSON.stringify(data)}); $("#shipModal").classList.remove("show"); toast("Đã cập nhật phí ship"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
-
-$("#settingsForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.shippingFee=Number(data.shippingFee||0); data.freeShipFrom=Number(data.freeShipFrom||0); try{ const result=await api("/api/settings",{method:"POST",body:JSON.stringify(data)}); settingsCache=result.settings||data; toast("Đã lưu cài đặt"); }catch(err){ toast(err.message,"error"); } });
-$("#archiveRunBtn").addEventListener("click",async()=>{ const year=$("#archiveYearInput").value||new Date().getFullYear(); const action=$("#archiveAction").value; try{ if(action==="view"){ const data=await api(`/api/archive?year=${encodeURIComponent(year)}`); $("#archiveResult").innerHTML=`Doanh thu năm ${year}: <b>${money(data.summary.revenue)}</b><br>Đơn ship: ${data.summary.shipOrders} • Đơn bàn: ${data.summary.tableOrders} • Huỷ: ${data.summary.cancelled}`; return; } if(action==="deleteYearRevenue" && String(year)===String(new Date().getFullYear())) return toast("Không được xoá năm hiện tại","error"); if(action==="deleteYearRevenue" && !confirm(`Xoá doanh thu năm ${year}? Không thể hoàn tác.`)) return; const data=await api("/api/archive",{method:"POST",body:JSON.stringify({action,year})}); toast(action==="closeYear"?"Đã chốt năm":"Đã xoá doanh thu năm cũ"); if(data.summary) $("#archiveResult").innerHTML=`Đã chốt năm ${year}: ${money(data.summary.revenue)}`; }catch(err){ toast(err.message,"error"); } });
-
-$("#confirmCancelBtn").addEventListener("click",()=>{ $("#confirmModal").classList.remove("show"); confirmJob=null; });
-$("#confirmOkBtn").addEventListener("click", async () => {
-  const btn = $("#confirmOkBtn");
-  $("#confirmModal").classList.remove("show");
-  const job = confirmJob;
-  confirmJob = null;
-  if (!job) return;
+async function loadMenu() {
   try {
-    if (btn) { btn.disabled = true; btn.dataset.oldText = btn.textContent; btn.textContent = "Đang xử lý..."; }
-    await job();
+    const data = await api("/api/menu");
+    if (data.shop) {
+      $("#shopName").textContent = data.shop.name || "CG Quán Ăn";
+      $("#contactName").textContent = data.shop.name || "CG Quán Ăn";
+      $("#contactPhone").textContent = data.shop.phone || "0559876962";
+      $("#contactAddress").textContent = data.shop.address || "Địa chỉ quán";
+    }
+    menuItems = data.items || [];
+    renderMenu();
   } catch (err) {
-    console.error("Confirm action failed:", err);
-    toast(err.message || "Không xác nhận được đơn", "error");
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = btn.dataset.oldText || "Đồng ý"; }
+    console.error(err);
+    $("#menuGrid").innerHTML = `<div class="panel">Không tải được menu: ${escapeHtml(err.message)}</div>`;
+    toast(err.message, "error");
   }
-});
+}
+function renderMenu() {
+  const search = $("#searchInput").value.trim().toLowerCase();
+  const cat = $("#categoryFilter").value;
+  const sort = $("#sortSelect").value;
+  let list = menuItems.filter(item =>
+    item.available !== false &&
+    (cat === "all" || item.category === cat) &&
+    String(item.name || "").toLowerCase().includes(search)
+  );
+  if (sort === "priceAsc") list.sort((a,b)=>Number(a.price)-Number(b.price));
+  if (sort === "priceDesc") list.sort((a,b)=>Number(b.price)-Number(a.price));
+  if (sort === "popular") list.sort((a,b)=>Number(b.popular||0)-Number(a.popular||0));
 
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden && pin) loadDashboard(); bindActions();});
+  $("#menuGrid").innerHTML = list.map(item => {
+    const fitClass = escapeHtml(item.imageFit || "custom-crop");
+    const art = item.imageUrl
+      ? `<img class="${fitClass} menu-img-crop" style="--img-zoom:${Number(item.imageZoom || 100) / 100};--img-x:${Number(item.imagePosX ?? 50)}%;--img-y:${Number(item.imagePosY ?? 50)}%" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">`
+      : `<span>${escapeHtml(item.icon || "🍽️")}</span>`;
+    return `<article class="food-card ${item.imageUrl ? "has-image" : "no-image"}">
+      <div class="food-art">${art}</div>
+      <div class="food-body">
+        <h3>${escapeHtml(item.name)}</h3>
+        <p>${escapeHtml(item.desc || "")}</p>
+        <div class="price-row"><span class="price">${money(item.price)}</span><button class="add-btn" type="button" data-id="${escapeHtml(item.id)}">Thêm</button></div>
+      </div>
+    </article>`;
+  }).join("") || `<div class="panel">Không có món phù hợp.</div>`;
 
-if(pin) showDashboard(); else showPin();
+  $$(".add-btn").forEach(btn => btn.addEventListener("click", () => addToCart(btn.dataset.id)));
 
-
-
-
-
-
-
-/* ===== fixed-real: close sessionMenuModal completely ===== */
-function closeSessionMenuModal(){
-  const modal = document.getElementById("sessionMenuModal");
-  if(!modal) return;
-  modal.classList.remove("show");
-  modal.setAttribute("aria-hidden", "true");
-  modal.style.display = "none";
+  const featured = list[0] || menuItems.find(x => x.available !== false);
+  if (featured) {
+    featuredId = featured.id;
+    $("#featuredName").textContent = featured.name;
+    $("#featuredPrice").textContent = money(featured.price);
+  } else {
+    $("#featuredName").textContent = "Chưa có món";
+    $("#featuredPrice").textContent = "---";
+  }
 }
 
-document.addEventListener("click", function(e){
-  const btn = e.target.closest("#sessionMenuCloseBtn");
-  if(!btn) return;
-  e.preventDefault();
-  e.stopPropagation();
-  closeSessionMenuModal();
-}, true);
+function cartTotalValue() {
+  const subtotal = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const discount = coupon === "QUAN10" ? Math.round(subtotal * 0.1) : 0;
+  return subtotal - discount;
+}
+function showMiniCart(itemName = "Món vừa chọn") {
+  const popup = $("#miniCartPopup");
+  if (!popup) return;
+  $("#miniCartName").textContent = itemName;
+  $("#miniCartCount").textContent = `${cart.reduce((s,i)=>s+i.qty,0)} món trong giỏ`;
+  $("#miniCartTotal").textContent = money(cartTotalValue());
+  popup.classList.add("show");
+  clearTimeout(showMiniCart.timer);
+  showMiniCart.timer = setTimeout(() => popup.classList.remove("show"), 4200);
+}
+function clearCartCompletely() {
+  cart = [];
+  coupon = "";
+  const couponInput = $("#couponInput");
+  if (couponInput) couponInput.value = "";
+  renderCart();
+  $("#miniCartPopup")?.classList.remove("show");
+}
+function addToCart(id) {
+  const item = menuItems.find(x => String(x.id) === String(id));
+  if (!item) return;
+  const old = cart.find(x => String(x.id) === String(id));
+  if (old) old.qty += 1;
+  else cart.push({ id:item.id, name:item.name, price:Number(item.price), icon:item.icon || "🍽️", qty:1 });
+  renderCart();
+  showMiniCart(item.name);
+  toast(`Đã thêm ${item.name}`);
+}
+function renderCart() {
+  $("#cartBadge").textContent = cart.reduce((s,i)=>s+i.qty,0);
+  $("#cartItems").innerHTML = cart.length ? cart.map(item => `
+    <div class="cart-item">
+      <div><b>${escapeHtml(item.icon)} ${escapeHtml(item.name)}</b><p>${money(item.price)} x ${item.qty}</p></div>
+      <div class="qty">
+        <button type="button" data-act="minus" data-id="${escapeHtml(item.id)}">−</button>
+        <span>${item.qty}</span>
+        <button type="button" data-act="plus" data-id="${escapeHtml(item.id)}">+</button>
+      </div>
+    </div>`).join("") : `<p class="muted">Giỏ hàng đang trống. Hãy chọn món trong menu.</p>`;
 
+  $$(".qty button").forEach(btn => btn.addEventListener("click", () => {
+    const item = cart.find(x => String(x.id) === String(btn.dataset.id));
+    if (!item) return;
+    item.qty += btn.dataset.act === "plus" ? 1 : -1;
+    cart = cart.filter(x => x.qty > 0);
+    renderCart();
+  }));
+  $("#cartTotal").textContent = money(cartTotalValue());
+}
+function openCart(){ $("#cartDrawer").classList.add("open"); $("#overlay").classList.add("show"); }
+function closeCart(){ $("#cartDrawer").classList.remove("open"); $("#overlay").classList.add("remove"); }
+
+function tableStatusLabel(status, locked) {
+  if (locked) return "khóa";
+  return { free:"trống", pending:"chờ xác nhận", reserved:"đã đặt", using:"đang dùng", cleaning:"đang dọn", locked:"khóa" }[status] || "trống";
+}
+function tableIsAvailable(table) {
+  if (!table) return true;
+  return !table.locked && table.status === "free";
+}
+function applyTableAvailability() {
+  $$(".table-node").forEach(node => {
+    const tableId = node.dataset.table;
+    const info = publicTableStatus.find(t => t.id === tableId);
+    const status = info?.locked ? "locked" : (info?.status || "free");
+    node.classList.remove("table-free","table-pending","table-reserved","table-using","table-cleaning","table-locked","unavailable");
+    node.classList.add(`table-${status}`);
+    const available = tableIsAvailable(info);
+    node.classList.toggle("unavailable", !available);
+    node.setAttribute("aria-label", `${tableId} - ${tableStatusLabel(info?.status || "free", info?.locked)}`);
+    node.setAttribute("aria-disabled", available ? "false" : "true");
+  });
+}
+async function refreshPublicTables(silent = true) {
+  try {
+    const form = $("#bookingForm");
+    const date = form?.date?.value || "";
+    const time = form?.time?.value || "";
+    const qs = new URLSearchParams();
+    if (date) qs.set("date", date);
+    if (time) qs.set("time", time);
+    const data = await api(`/api/tables?${qs.toString()}`);
+    publicTableStatus = data.items || [];
+    applyTableAvailability();
+    const free = publicTableStatus.filter(tableIsAvailable).length;
+    $("#tableRealtimeHint").textContent = date && time ? `Còn ${free} bàn trống cho khung giờ này` : `Còn ${free} bàn trống hiện tại`;
+  } catch (err) {
+    console.error(err);
+    if (!silent) toast(err.message, "error");
+  }
+}
+function setupTableMap() {
+  $$(".table-node").forEach(node => {
+    const choose = () => {
+      const info = publicTableStatus.find(t => t.id === node.dataset.table);
+      if (info && !tableIsAvailable(info)) {
+        toast(`Bàn ${node.dataset.table} đang ${tableStatusLabel(info.status, info.locked)}, vui lòng chọn bàn khác`, "error");
+        return;
+      }
+      selectedTable = node.dataset.table;
+      $$(".table-node").forEach(x => x.classList.remove("selected"));
+      node.classList.add("selected");
+      $("#selectedTableLabel").textContent = selectedTable;
+      $("#selectedTableInput").value = selectedTable;
+      toast(`Đã chọn bàn ${selectedTable}`);
+    };
+    node.addEventListener("click", choose);
+    node.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(); }
+    });
+  });
+  const form = $("#bookingForm");
+  form?.date?.addEventListener("change", () => refreshPublicTables(false));
+  form?.time?.addEventListener("change", () => refreshPublicTables(false));
+  clearInterval(tableRefreshTimer);
+  tableRefreshTimer = setInterval(() => { if (!document.hidden) refreshPublicTables(true); }, 2000);
+  refreshPublicTables(true);
+}
+
+async function submitOrder(e) {
+  e.preventDefault();
+  if (!cart.length) { toast("Bạn chưa chọn món", "error"); openCart(); return; }
+  const btn = e.submitter;
+  setLoading(btn, true, "Đang gửi đơn...");
+  try {
+    const customer = Object.fromEntries(new FormData(e.target).entries());
+    
+    // Gửi trực tiếp, KHÔNG tính phí ship và KHÔNG bật popup confirm
+    const result = await api("/api/orders", { method:"POST", body:JSON.stringify({ customer, items:cart, coupon }) });
+    
+    clearCartCompletely();
+    e.target.reset();
+    closeCart();
+    showSuccess("Đã gửi đơn giao hàng", `Mã đơn: ${result.orderCode}. Quán đã nhận thông báo Telegram.`);
+  } catch (err) {
+    console.error(err);
+    toast(err.message, "error");
+  } finally { setLoading(btn, false); }
+}
+
+async function submitDineInOrder(e) {
+  e.preventDefault();
+  if (!cart.length) { toast("Bạn chưa chọn món để gọi thêm", "error"); return; }
+  const btn = e.submitter;
+  setLoading(btn, true, "Đang gửi món vào bàn...");
+  try {
+    const form = Object.fromEntries(new FormData(e.target).entries());
+    const result = await api("/api/sessions", { method:"POST", body:JSON.stringify({
+      action:"addItems",
+      table:String(form.table || "").toUpperCase().trim(),
+      customerName: form.customerName,
+      note: form.note,
+      items: cart
+    }) });
+    clearCartCompletely();
+    e.target.reset();
+    showSuccess("Đã gọi thêm món", `Đã gộp vào phiên bàn ${result.sessionCode}. Tổng tạm tính: ${money(result.total)}.`);
+  } catch (err) {
+    console.error(err);
+    toast(err.message, "error");
+  } finally { setLoading(btn, false); }
+}
+
+async function submitBooking(e) {
+  e.preventDefault();
+  const btn = e.submitter;
+  setLoading(btn, true, "Đang gửi đặt bàn...");
+  try {
+    if (!selectedTable) { toast("Hiện không còn bàn trống cho khung giờ này", "error"); return; }
+    const info = publicTableStatus.find(t => t.id === selectedTable);
+    if (info && !tableIsAvailable(info)) {
+      toast(`Bàn ${selectedTable} không còn trống, vui lòng chọn bàn khác`, "error");
+      await refreshPublicTables(false);
+      return;
+    }
+    const body = Object.fromEntries(new FormData(e.target).entries());
+    const preorderItems = getCartPreorderItems();
+    const preorderSubtotal = getCartSubtotal();
+    body.table = selectedTable;
+    body.preorderItems = preorderItems;
+    body.preorderSubtotal = preorderSubtotal;
+    const result = await api("/api/bookings", { method:"POST", body:JSON.stringify(body) });
+    const preorderText = preorderItems.length ? ` Quán cũng đã nhận ${preorderItems.reduce((s,i)=>s+i.qty,0)} món đặt trước, tạm tính ${money(preorderSubtotal)}.` : "";
+    clearCartCompletely();
+    e.target.reset();
+    showSuccess("Đã gửi đặt bàn", `Mã đặt bàn: ${result.bookingCode}.${preorderText} Quán đã nhận thông báo Telegram.`);
+    refreshPublicTables(true);
+  } catch (err) {
+    console.error(err);
+    toast(err.message, "error");
+  } finally { setLoading(btn, false); }
+}
+
+function setDefaultBookingDateTime() {
+  const form = $("#bookingForm");
+  if (!form) return;
+  if (!form.date.value) form.date.value = new Date().toISOString().slice(0,10);
+  if (!form.time.value) form.time.value = new Date().toTimeString().slice(0,5);
+}
+
+$("#searchInput").addEventListener("input", renderMenu);
+$("#categoryFilter").addEventListener("change", renderMenu);
+$("#sortSelect").addEventListener("change", renderMenu);
+$("#openCartBtn").addEventListener("click", openCart);
+$("#closeCartBtn").addEventListener("click", closeCart);
+$("#overlay").addEventListener("click", closeCart);
+$("#modalCloseBtn").addEventListener("click", closeSuccess);
+$("#miniCartCloseBtn")?.addEventListener("click", () => $("#miniCartPopup").classList.remove("show"));
+$("#miniCartOpenBtn")?.addEventListener("click", () => { $("#miniCartPopup").classList.remove("show"); openCart(); });
+$("#successModal").addEventListener("click", e => { if (e.target.id === "successModal") closeSuccess(); });
+$("#featuredAddBtn").addEventListener("click", () => featuredId && addToCart(featuredId));
+$("#applyCouponBtn").addEventListener("click", () => {
+  const code = $("#couponInput").value.trim().toUpperCase();
+  if (code === "QUAN10") { coupon = code; toast("Đã áp dụng giảm 10%"); }
+  else { coupon = ""; toast("Mã giảm giá không hợp lệ", "error"); }
+  renderCart();
+});
+$("#orderForm").addEventListener("submit", submitOrder);
+$("#bookingForm").addEventListener("submit", submitBooking);
+$("#dineInForm")?.addEventListener("submit", submitDineInOrder);
+
+setDefaultBookingDateTime();
+setupTableMap();
+renderCart();
+loadMenu();
