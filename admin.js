@@ -32,6 +32,16 @@ async function api(path, options = {}) {
   return data;
 }
 function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+function menuImageHtml(item, className = "admin-menu-thumb"){
+  const fitClass = escapeHtml(item?.imageFit || "custom-crop");
+  const zoom = Number(item?.imageZoom || 100) / 100;
+  const x = Number(item?.imagePosX ?? 50);
+  const y = Number(item?.imagePosY ?? 50);
+  if (item?.imageUrl) {
+    return `<img class="${escapeHtml(className)} ${fitClass}" style="--img-zoom:${zoom};--img-x:${x}%;--img-y:${y}%" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name || "Món ăn")}" loading="lazy">`;
+  }
+  return `<span class="${escapeHtml(className)} no-image-thumb">${escapeHtml(item?.icon || "🍽️")}</span>`;
+}
 
 function getStatusLabel(status, fallback = "") {
   const raw = status && typeof status === "object"
@@ -482,15 +492,16 @@ function renderSessions(items){
 function renderMenuAdmin(items){
   $("#menuAdminList").innerHTML=items.length ? `<div class="admin-compact-list menu-compact-list">
     ${items.map(item=>`<article class="admin-mini-card menu-mini-card">
-      <div class="mini-main">
-        <div class="mini-title"><b>${escapeHtml(item.icon||"🍽️")} ${escapeHtml(item.name||"")}</b><small>${escapeHtml(item.id)}</small></div>
+      <div class="mini-main menu-mini-main">
+        ${menuImageHtml(item, "admin-menu-thumb")}
+        <div class="menu-mini-info"><div class="mini-title"><b>${escapeHtml(item.icon||"🍽️")} ${escapeHtml(item.name||"")}</b><small>${escapeHtml(item.id)}</small></div>
         <div class="mini-meta">
           <span>${escapeHtml(getCategoryLabel(item.category))}</span>
           <span>Gốc: <b>${money(item.originalPrice)}</b></span>
           <span>Bán: <b>${money(item.price)}</b></span>
           <span>Lãi: <b class="${Number(item.profit||0)>=0?"good":"bad"}">${money(item.profit)}</b></span>
           <span><b class="status ${item.available===false?"status-cancelled":"status-done"}">${item.available===false?"Ẩn":"Đang bán"}</b></span>
-        </div>
+        </div></div>
       </div>
       <div class="mini-actions">
         <button data-menu-edit="${escapeHtml(item.id)}">Sửa</button>
@@ -669,7 +680,8 @@ function renderSessionMenuGrid(){
   const q = ($("#sessionMenuSearch")?.value || "").trim().toLowerCase();
   const list = menuCache.filter(item => item.available !== false && String(item.name || "").toLowerCase().includes(q));
   $("#sessionMenuGrid").innerHTML = list.length ? list.map(item=>`
-    <button type="button" class="session-food-card" data-add-session-food="${escapeHtml(item.id)}">
+    <button type="button" class="session-food-card has-real-image" data-add-session-food="${escapeHtml(item.id)}">
+      ${menuImageHtml(item, "session-food-thumb")}
       <b>${escapeHtml(item.icon || "🍽️")} ${escapeHtml(item.name || "")}</b>
       <span>${money(item.price || 0)}</span>
     </button>

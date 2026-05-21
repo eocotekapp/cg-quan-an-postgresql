@@ -2315,3 +2315,95 @@ textarea{min-height:92px;resize:vertical}
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+/* ===== v33: real food images in admin menu + add-to-table modal ===== */
+.menu-mini-card .menu-mini-main{
+  display:grid !important;
+  grid-template-columns:112px minmax(0,1fr) !important;
+  gap:14px !important;
+  align-items:center !important;
+}
+.menu-mini-card .menu-mini-info{min-width:0 !important;}
+.admin-menu-thumb{
+  width:112px !important;
+  height:92px !important;
+  border-radius:18px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  object-fit:cover !important;
+  object-position:var(--img-x,50%) var(--img-y,50%) !important;
+  transform:scale(var(--img-zoom,1)) !important;
+  transform-origin:var(--img-x,50%) var(--img-y,50%) !important;
+  clip-path:inset(0 round 18px) !important;
+  background:linear-gradient(135deg,rgba(243,199,91,.18),rgba(255,255,255,.06)) !important;
+  border:1px solid rgba(255,229,170,.28) !important;
+  box-shadow:0 12px 28px rgba(0,0,0,.24) !important;
+  flex:0 0 auto !important;
+}
+.admin-menu-thumb.no-image-thumb{
+  font-size:38px !important;
+  transform:none !important;
+}
+#sessionMenuModal .session-menu-grid{
+  grid-template-columns:1fr !important;
+  gap:10px !important;
+}
+#sessionMenuModal .session-food-card{
+  display:grid !important;
+  grid-template-columns:76px minmax(0,1fr) auto !important;
+  align-items:center !important;
+  gap:12px !important;
+  min-height:72px !important;
+  padding:8px 12px 8px 8px !important;
+  border-radius:16px !important;
+}
+#sessionMenuModal .session-food-thumb{
+  width:76px !important;
+  height:56px !important;
+  border-radius:14px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  object-fit:cover !important;
+  object-position:var(--img-x,50%) var(--img-y,50%) !important;
+  transform:scale(var(--img-zoom,1)) !important;
+  transform-origin:var(--img-x,50%) var(--img-y,50%) !important;
+  clip-path:inset(0 round 14px) !important;
+  background:rgba(0,0,0,.10) !important;
+  border:1px solid rgba(60,40,20,.16) !important;
+  flex:0 0 auto !important;
+}
+#sessionMenuModal .session-food-thumb.no-image-thumb{
+  font-size:30px !important;
+  transform:none !important;
+}
+#sessionMenuModal .session-food-card b{
+  min-width:0 !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+#sessionMenuModal .session-food-card span{
+  white-space:nowrap !important;
+}
+@media(max-width:760px){
+  .menu-mini-card .menu-mini-main{
+    grid-template-columns:86px minmax(0,1fr) !important;
+    gap:10px !important;
+  }
+  .admin-menu-thumb{
+    width:86px !important;
+    height:74px !important;
+    border-radius:16px !important;
+    clip-path:inset(0 round 16px) !important;
+  }
+  #sessionMenuModal .session-food-card{
+    grid-template-columns:64px minmax(0,1fr) auto !important;
+    gap:10px !important;
+  }
+  #sessionMenuModal .session-food-thumb{
+    width:64px !important;
+    height:48px !important;
+  }
+}
