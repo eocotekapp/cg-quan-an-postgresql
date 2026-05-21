@@ -1,14 +1,19 @@
-/* CG Quán Ăn - Admin Per Order Ship v27
-   Chỉnh phí ship riêng từng đơn, file riêng.
-   Nếu server chưa hỗ trợ, lưu local override để admin hiện đúng trên máy này.
+/* CG Quán Ăn - Admin Per Order Ship v28
+   File riêng.
+   Sửa: chỉnh phí ship phải cập nhật cả tổng đơn = tạm tính món + ship.
 */
 (function () {
   "use strict";
 
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-  const OVERRIDE_KEY = "CG_ORDER_SHIP_OVERRIDES_V27";
+  const OVERRIDE_KEY = "CG_ORDER_SHIP_OVERRIDES_V28";
   const settings = () => window.CGSettings;
+
+  function rawTextMoney(text) {
+    const n = String(text || "").replace(/[^\d]/g, "");
+    return n ? Number(n) : 0;
+  }
 
   function getOverrides() {
     try { return JSON.parse(localStorage.getItem(OVERRIDE_KEY) || "{}"); }
@@ -31,6 +36,49 @@
 
   function findCards() {
     return $$("article, .admin-card, .card, .order-card, .compact-card").filter(isShipCard);
+  }
+
+  function getFoodSubtotal(card) {
+    const text = card?.textContent || "";
+    const m = text.match(/Tạm tính món:\s*([\d.]+)đ/i);
+    if (m) return rawTextMoney(m[1]);
+
+    // Fallback: lấy dòng món trong khung, tránh lấy tổng dòng đầu có ship.
+    const itemBlock = Array.from(card.querySelectorAll("*")).find(el =>
+      /Món trong đơn/i.test(el.textContent || "") && /Tạm tính món/i.test(el.textContent || "")
+    );
+    if (itemBlock) {
+      const m2 = (itemBlock.textContent || "").match(/Tạm tính món:\s*([\d.]+)đ/i);
+      if (m2) return rawTextMoney(m2[1]);
+    }
+    return 0;
+  }
+
+  function getCurrentShip(card) {
+    const text = card?.textContent || "";
+    const m = text.match(/Ship:\s*([\d.]+)đ/i);
+    return m ? rawTextMoney(m[1]) : Number(settings().readSettings().shippingFee || 0);
+  }
+
+  function getCurrentTotal(card) {
+    const text = card?.textContent || "";
+    const m = text.match(/💰\s*([\d.]+)đ/i) || text.match(/(?:^|\s)([\d.]+)đ\s*•\s*Ship:/i);
+    return m ? rawTextMoney(m[1]) : 0;
+  }
+
+  function setFirstMoneyShipLine(card, total, shipFee) {
+    const totalText = settings().money(total);
+    const shipText = settings().money(shipFee);
+    const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      const value = node.nodeValue || "";
+      if (/[\d.]+đ\s*•\s*Ship:\s*[\d.]+đ/i.test(value)) {
+        node.nodeValue = value.replace(/[\d.]+đ\s*•\s*Ship:\s*[\d.]+đ/i, `${totalText} • Ship: ${shipText}`);
+        return true;
+      }
+    }
+    return false;
   }
 
   function ensureButtons() {
@@ -65,6 +113,7 @@
           <span>Phí ship</span>
           <input name="shippingFee" inputmode="numeric" autocomplete="off" required>
         </label>
+        <p id="cgOrderShipPreview" class="muted"></p>
         <button class="btn primary full" type="submit">Lưu phí ship</button>
       </form>
     `;
@@ -77,22 +126,36 @@
     });
 
     modal.addEventListener("input", (e) => {
-      if (e.target.name === "shippingFee") e.target.value = settings().formatMoney(e.target.value);
+      if (e.target.name !== "shippingFee") return;
+      e.target.value = settings().formatMoney(e.target.value);
+      updatePreview();
     });
 
     modal.addEventListener("submit", async (e) => {
       e.preventDefault();
       const form = e.target;
       const code = form.dataset.orderCode || "";
-      const fee = settings().rawMoney(form.shippingFee.value);
+      const shipFee = settings().rawMoney(form.shippingFee.value);
+      const foodSubtotal = Number(form.dataset.foodSubtotal || 0);
+      const newTotal = foodSubtotal + shipFee;
 
       const overrides = getOverrides();
-      overrides[code] = fee;
+      overrides[code] = { shipFee, total: newTotal, foodSubtotal };
       saveOverrides(overrides);
       applyOverrides();
 
-      // Thử gửi server nếu có endpoint, không phá UI nếu chưa hỗ trợ.
-      const body = JSON.stringify({ orderCode: code, code, shippingFee: fee, shipFee: fee, deliveryFee: fee });
+      // Gửi đầy đủ tổng mới cho server nếu server có hỗ trợ.
+      const payload = {
+        orderCode: code,
+        code,
+        shippingFee: shipFee,
+        shipFee,
+        deliveryFee: shipFee,
+        total: newTotal,
+        grandTotal: newTotal,
+        currentTotal: newTotal
+      };
+      const body = JSON.stringify(payload);
       for (const path of ["/api/orders/shipping", "/api/orders/ship", "/api/orders"]) {
         try {
           if (typeof api === "function") await api(path, { method: "PATCH", body });
@@ -107,52 +170,88 @@
     return modal;
   }
 
+  function updatePreview() {
+    const form = $("#cgOrderShipForm");
+    if (!form) return;
+    const foodSubtotal = Number(form.dataset.foodSubtotal || 0);
+    const shipFee = settings().rawMoney(form.shippingFee.value);
+    const total = foodSubtotal + shipFee;
+    const preview = $("#cgOrderShipPreview");
+    if (preview) preview.textContent = `Tạm tính món ${settings().money(foodSubtotal)} + ship ${settings().money(shipFee)} = tổng ${settings().money(total)}`;
+  }
+
   function openModal(card) {
     const modal = ensureModal();
     const code = getCode(card);
     const overrides = getOverrides();
-    const text = card.textContent || "";
-    const m = text.match(/Ship:\s*([\d.]+)đ/i);
-    const current = overrides[code] ?? (m ? m[1] : settings().readSettings().shippingFee);
+    const foodSubtotal = getFoodSubtotal(card);
+    const current = overrides[code]?.shipFee ?? getCurrentShip(card);
 
     $("#cgOrderShipCode").textContent = code ? `Mã đơn: ${code}` : "";
     const form = $("#cgOrderShipForm");
     form.dataset.orderCode = code;
+    form.dataset.foodSubtotal = String(foodSubtotal);
     form.shippingFee.value = settings().formatMoney(current);
+    updatePreview();
     modal.classList.add("show");
   }
 
-  // Apply local ship override display
-  function applyOverridesSafe() {
+  function applyOverrides() {
     const overrides = getOverrides();
     findCards().forEach((card) => {
       const code = getCode(card);
       if (!code || overrides[code] == null) return;
-      const feeText = settings().money(overrides[code]);
-      const walker = document.createTreeWalker(card, NodeFilter.SHOW_TEXT);
-      let node;
-      let found = false;
-      while ((node = walker.nextNode())) {
-        if (/Ship:\s*[\d.]+đ/i.test(node.nodeValue || "")) {
-          node.nodeValue = node.nodeValue.replace(/Ship:\s*[\d.]+đ/i, `Ship: ${feeText}`);
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        const line = document.createElement("div");
-        line.className = "cg-order-ship-line";
-        line.textContent = `Ship: ${feeText}`;
-        card.insertBefore(line, card.querySelector(".cg-order-ship-edit-btn") || null);
-      }
+
+      const data = typeof overrides[code] === "number"
+        ? { shipFee: Number(overrides[code]), foodSubtotal: getFoodSubtotal(card) }
+        : overrides[code];
+
+      const foodSubtotal = Number(data.foodSubtotal || getFoodSubtotal(card) || 0);
+      const shipFee = Number(data.shipFee || 0);
+      const total = Number(data.total || (foodSubtotal + shipFee));
+
+      setFirstMoneyShipLine(card, total, shipFee);
     });
+  }
+
+  function patchStatusRequests() {
+    if (window.__CG_ORDER_SHIP_STATUS_PATCHED_V28__) return;
+    window.__CG_ORDER_SHIP_STATUS_PATCHED_V28__ = true;
+    const nativeFetch = window.fetch.bind(window);
+
+    window.fetch = function(input, init = {}) {
+      try {
+        const bodyText = typeof init.body === "string" ? init.body : "";
+        if (bodyText && /OD\d{8}-[A-Z0-9]+/i.test(bodyText)) {
+          const code = (bodyText.match(/\bOD\d{8}-[A-Z0-9]+\b/i) || [])[0]?.toUpperCase();
+          const over = getOverrides()[code];
+          if (code && over) {
+            const obj = JSON.parse(bodyText);
+            const data = typeof over === "number" ? { shipFee: over } : over;
+            if (data.shipFee != null) {
+              obj.shippingFee = Number(data.shipFee);
+              obj.shipFee = Number(data.shipFee);
+              obj.deliveryFee = Number(data.shipFee);
+            }
+            if (data.total != null) {
+              obj.total = Number(data.total);
+              obj.grandTotal = Number(data.total);
+              obj.currentTotal = Number(data.total);
+            }
+            init = { ...init, body: JSON.stringify(obj) };
+          }
+        }
+      } catch (_) {}
+      return nativeFetch(input, init);
+    };
   }
 
   function init() {
     if (!window.CGSettings) return;
     ensureModal();
     ensureButtons();
-    applyOverridesSafe();
+    applyOverrides();
+    patchStatusRequests();
 
     document.addEventListener("click", (e) => {
       const btn = e.target.closest(".cg-order-ship-edit-btn");
@@ -164,7 +263,7 @@
 
     new MutationObserver(() => {
       ensureButtons();
-      applyOverridesSafe();
+      applyOverrides();
     }).observe(document.body, { childList: true, subtree: true });
   }
 
