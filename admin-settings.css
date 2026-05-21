@@ -1,0 +1,46 @@
+/* CG Quán Ăn - Settings Tab v27 */
+.cg-settings-hidden {
+  display: none !important;
+}
+
+.cg-settings-view {
+  display: none;
+  padding-bottom: 120px;
+}
+
+.cg-settings-view.show {
+  display: block;
+}
+
+.cg-settings-panel {
+  border-color: rgba(255,214,120,.25) !important;
+}
+
+.cg-settings-form {
+  display: grid;
+  gap: 14px;
+}
+
+#cgSettingsTaskBtn {
+  min-width: 84px;
+}
+
+.cg-order-ship-edit-btn {
+  margin-top: 10px !important;
+  background: rgba(255,214,120,.13) !important;
+  border: 1px solid rgba(255,214,120,.28) !important;
+  color: #ffe08a !important;
+}
+
+.cg-order-ship-line {
+  margin-top: 8px;
+  color: #ffe08a;
+  font-weight: 900;
+}
+
+.cg-ship-confirm-modal .modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+}
