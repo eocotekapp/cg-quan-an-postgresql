@@ -21,7 +21,6 @@ let menuCache = [];
 let tableCache = [];
 let inventoryCache = [];
 let sessionCache = [];
-let settingsCache = {};
 let lastOrderCount = 0;
 let lastBookingCount = 0;
 let firstLoadDone = false;
@@ -33,7 +32,6 @@ async function api(path, options = {}) {
   return data;
 }
 function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
-
 
 function getStatusLabel(status, fallback = "") {
   const raw = status && typeof status === "object"
@@ -92,6 +90,9 @@ function toast(message, type = "ok") {
     el.textContent = "";
   }, 2600);
 }
+function isOrderConfirmedStatus(s){
+  return ["processing","delivering","confirmed"].includes(String(s || ""));
+}
 function normalizedStatus(item){
   const s = String(item.status || "new");
   if (s === "done") return "done";
@@ -99,19 +100,19 @@ function normalizedStatus(item){
   if (isOrderConfirmedStatus(s)) return "confirmed";
   return "new";
 }
-function itemKind(item){
-  return item.__kind || item.kind || item.type || "";
-}
-function sortNewest(a,b){
+function newestFirst(a,b){
   const av = Number(a.createdAtMs || a.arrivalMs || a.createdAt?.seconds || 0);
   const bv = Number(b.createdAtMs || b.arrivalMs || b.createdAt?.seconds || 0);
   return bv - av;
 }
-function buildMixedItems(orders, bookings){
+function itemKind(item){
+  return item.__kind || item.kind || item.type || "";
+}
+function mixedItems(orders, bookings){
   return [
     ...(orders || []).map(x => ({...x, __kind:"orders"})),
     ...(bookings || []).map(x => ({...x, __kind:"bookings"}))
-  ].sort(sortNewest);
+  ].sort(newestFirst);
 }
 
 function renderDashboardItemsBox(item){
@@ -157,7 +158,7 @@ function renderAppOrderCard(item){
     : `📍 ${escapeHtml(item.customer?.address || "")}`;
   const secondLine = isBooking
     ? `👥 Bàn ${escapeHtml(item.table || "")} • ${escapeHtml(item.guests || "")} người`
-    : `💰 ${money(item.total || 0)}${item.shippingFee ? " • Ship: " + money(item.shippingFee) : ""}`;
+    : `💰 ${money(item.total || 0)}`;
   const badge = status === "new" ? "MỚI" : getStatusLabel(item.status);
 
   return `<article class="app-order-card ${isBooking ? "booking-card" : "ship-card"}">
@@ -183,88 +184,7 @@ function renderAppOrderCard(item){
     </div>
   </article>`;
 }
-function renderDashboardFeed(orders, bookings){
-  const mixed = buildMixedItems(orders, bookings);
-  
-    bindActions();
-const counts = {
-    new: mixed.filter(x => normalizedStatus(x)==="new").length,
-    confirmed: mixed.filter(x => normalizedStatus(x)==="confirmed").length,
-    done: mixed.filter(x => normalizedStatus(x)==="done").length,
-    cancelled: mixed.filter(x => normalizedStatus(x)==="cancelled").length
-  };
 
-  const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
-  setText("#countNew", counts.new);
-  setText("#countConfirmed", counts.confirmed);
-  setText("#countDone", counts.done);
-  setText("#countCancelled", counts.cancelled);
-
-  const newOrders = (orders || []).filter(x => x.status === "new").length;
-  const newBookings = (bookings || []).filter(x => x.status === "new").length;
-  setText("#statNewOrders", newOrders);
-  setText("#statNewBookings", newBookings);
-  setText("#statNew", newOrders + newBookings);
-
-  let list = mixed.filter(x => normalizedStatus(x) === currentStatusFilter);
-  if (currentKindFilter !== "all") list = list.filter(x => itemKind(x) === currentKindFilter);
-  if (currentStatusFilter === "new") list = list.filter(x => x.status === "new");
-
-  const titleMap = {new:"Đơn chờ xác nhận",confirmed:"Đơn đã xác nhận",done:"Đơn hoàn thành",cancelled:"Đơn đã hủy"};
-  const kindMap = {all:"Tất cả",bookings:"Đơn đặt bàn",orders:"Đơn ship"};
-  const title = document.querySelector("#dashboardPanel h2");
-  if (title) title.textContent = `${titleMap[currentStatusFilter] || "Dashboard"} • ${kindMap[currentKindFilter] || "Tất cả"} (${list.length})`;
-
-  const box = $("#dashboardList");
-  if (box) {
-    box.innerHTML = list.length ? list.slice(0,80).map(renderAppOrderCard).join("") : `<p class="muted empty-state">Không có đơn trong mục này.</p>`;
-  }
-  bindActions();
-  bindSessionActions();
-}
-function openDrawer(){
-  document.body.classList.add("drawer-open");
-}
-function closeDrawer(){
-  document.body.classList.remove("drawer-open");
-}
-function showPanel(tab){
-  ["dashboard","orders","bookings","tables","sessions","menu","inventory","analytics","settings"].forEach(name=>$(`#${name}Panel`)?.classList.toggle("hidden", name !== tab));
-  $$(".tab-btn").forEach(x=>x.classList.toggle("active", x.dataset.tab === tab));
-  if(tab === "analytics") loadAnalytics(currentRange);
-  closeDrawer();
-}
-function setStatusFilter(status){
-  currentStatusFilter = status || "new";
-  $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
-  showPanel("dashboard");
-  loadDashboard(); bindActions();}
-
-
-function isOrderConfirmedStatus(s){
-  return ["processing","delivering","confirmed"].includes(String(s || ""));
-}
-function normalizedStatus(item){
-  const s = String(item.status || "new");
-  if (s === "done") return "done";
-  if (s === "cancelled") return "cancelled";
-  if (isOrderConfirmedStatus(s)) return "confirmed";
-  return "new";
-}
-function newestFirst(a,b){
-  const av = Number(a.createdAtMs || a.arrivalMs || a.createdAt?.seconds || 0);
-  const bv = Number(b.createdAtMs || b.arrivalMs || b.createdAt?.seconds || 0);
-  return bv - av;
-}
-function itemKind(item){
-  return item.__kind || item.kind || item.type || "";
-}
-function mixedItems(orders, bookings){
-  return [
-    ...(orders || []).map(x => ({...x, __kind:"orders"})),
-    ...(bookings || []).map(x => ({...x, __kind:"bookings"}))
-  ].sort(newestFirst);
-}
 function renderMiniOrderCard(item){
   const kind = itemKind(item);
   const status = normalizedStatus(item);
@@ -278,7 +198,7 @@ function renderMiniOrderCard(item){
     : escapeHtml(item.customer?.address || "");
   const timeLine = isBooking
     ? `${escapeHtml(item.date || "")} • ${escapeHtml(item.time || "")}`
-    : `${money(item.total || 0)}${item.shippingFee ? " • Ship: " + money(item.shippingFee) : ""}`;
+    : `${money(item.total || 0)}`;
   const icon = isBooking ? "🪑" : "🚚";
   const statusBadge = status === "new" ? "MỚI" : getStatusLabel(item.status);
 
@@ -304,6 +224,7 @@ function renderMiniOrderCard(item){
     </div>
   </article>`;
 }
+
 function renderDashboardFeed(orders, bookings){
   const all = mixedItems(orders, bookings);
   const counts = {
@@ -312,23 +233,50 @@ function renderDashboardFeed(orders, bookings){
     done: all.filter(x => normalizedStatus(x)==="done").length,
     cancelled: all.filter(x => normalizedStatus(x)==="cancelled").length
   };
-  $("#countNew").textContent = counts.new;
-  $("#countConfirmed").textContent = counts.confirmed;
-  $("#countDone").textContent = counts.done;
-  $("#countCancelled").textContent = counts.cancelled;
+
+  const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
+  setText("#countNew", counts.new);
+  setText("#countConfirmed", counts.confirmed);
+  setText("#countDone", counts.done);
+  setText("#countCancelled", counts.cancelled);
+
+  const newOrders = (orders || []).filter(x => x.status === "new").length;
+  const newBookings = (bookings || []).filter(x => x.status === "new").length;
+  setText("#statNewOrders", newOrders);
+  setText("#statNewBookings", newBookings);
+  setText("#statNew", newOrders + newBookings);
 
   let list = all.filter(x => normalizedStatus(x) === currentStatusFilter);
   if (currentKindFilter !== "all") list = list.filter(x => itemKind(x) === currentKindFilter);
   if (currentStatusFilter === "new") list = list.filter(x => x.status === "new");
 
-  $("#dashboardList").innerHTML = list.length
-    ? list.slice(0, 60).map(renderMiniOrderCard).join("")
-    : `<p class="muted empty-state">Không có đơn trong mục này.</p>`;
+  const titleMap = {new:"Đơn chờ xác nhận",confirmed:"Đơn đã xác nhận",done:"Đơn hoàn thành",cancelled:"Đơn đã hủy"};
+  const kindMap = {all:"Tất cả",bookings:"Đơn đặt bàn",orders:"Đơn ship"};
+  const title = document.querySelector("#dashboardPanel h2");
+  if (title) title.textContent = `${titleMap[currentStatusFilter] || "Dashboard"} • ${kindMap[currentKindFilter] || "Tất cả"} (${list.length})`;
 
+  const box = $("#dashboardList");
+  if (box) {
+    box.innerHTML = list.length ? list.slice(0,80).map(renderAppOrderCard).join("") : `<p class="muted empty-state">Không có đơn trong mục này.</p>`;
+  }
   bindActions();
   bindSessionActions();
 }
 
+function openDrawer(){ document.body.classList.add("drawer-open"); }
+function closeDrawer(){ document.body.classList.remove("drawer-open"); }
+function showPanel(tab){
+  ["dashboard","orders","bookings","tables","sessions","menu","inventory","analytics"].forEach(name=>$(`#${name}Panel`)?.classList.toggle("hidden", name !== tab));
+  $$(".tab-btn").forEach(x=>x.classList.toggle("active", x.dataset.tab === tab));
+  if(tab === "analytics") loadAnalytics(currentRange);
+  closeDrawer();
+}
+function setStatusFilter(status){
+  currentStatusFilter = status || "new";
+  $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
+  showPanel("dashboard");
+  loadDashboard(); bindActions();
+}
 
 function showDashboard(){
   $("#pinScreen").classList.add("hidden");
@@ -359,14 +307,13 @@ function showNewNotice(message){
 
 async function loadDashboard(){
   try{
-    const [orders,bookings,menu,tables,inventory,sessions,settings] = await Promise.all([
+    const [orders,bookings,menu,tables,inventory,sessions] = await Promise.all([
       api("/api/orders"),
       api("/api/bookings"),
       api("/api/menu?admin=1"),
       api(`/api/tables?admin=1&date=${encodeURIComponent($("#tableDateFilter")?.value||"")}&time=${encodeURIComponent($("#tableTimeFilter")?.value||"")}`),
       api("/api/inventory"),
-      api("/api/sessions"),
-      api("/api/settings")
+      api("/api/sessions")
     ]);
 
     const orderItems=orders.items||[], bookingItems=bookings.items||[];
@@ -380,13 +327,6 @@ async function loadDashboard(){
     tableCache=tables.items||[];
     inventoryCache=inventory.items||[];
     sessionCache=sessions.items||[];
-    settingsCache=settings.settings||{};
-
-    const newOrders = orderItems.filter(x=>x.status==="new");
-    const newBookings = bookingItems.filter(x=>x.status==="new");
-    $("#statNewOrders").textContent = newOrders.length;
-    $("#statNewBookings").textContent = newBookings.length;
-    $("#statNew").textContent = newOrders.length + newBookings.length;
 
     renderDashboardFeed(orderItems, bookingItems);
     renderOrders(orderItems);
@@ -395,7 +335,6 @@ async function loadDashboard(){
     renderTables(tableCache);
     renderInventory(inventoryCache);
     renderSessions(sessionCache);
-    fillSettingsForm();
     loadAnalytics(currentRange);
 
     const hint=$("#refreshHint");
@@ -430,18 +369,17 @@ function renderOrders(items){
         <div><div class="admin-code">${escapeHtml(order.orderCode||order.id)}</div><p><b>${escapeHtml(order.customer?.name||"")}</b> • ${escapeHtml(order.customer?.phone||"")}</p><p class="muted">${lines}</p></div>
         <div><span class="status status-${escapeHtml(order.status||"new")}">${getStatusLabel(order.status)}</span><b class="compact-money">${money(order.total)}</b></div>
       </div>
-      <p class="muted">${escapeHtml(order.customer?.address||"")} — Ship: ${money(order.shippingFee||0)} — ${escapeHtml(order.customer?.note||"Không ghi chú")}</p>
+      <p class="muted">${escapeHtml(order.customer?.address||"")} — ${escapeHtml(order.customer?.note||"Không ghi chú")}</p>
       ${itemsBox}
       <div class="admin-actions">
         <button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="processing">Đang xử lý</button>
         <button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="done">Hoàn thành</button>
         <button class="action-btn action-cancel" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="cancelled">Hủy</button>
-        <button class="action-btn action-confirm" data-ship-edit="${escapeHtml(order.id)}" data-fee="${Number(order.shippingFee||0)}">Sửa ship</button>
         <button class="action-btn action-delete" data-delete-order="${escapeHtml(order.id)}">Xoá hẳn</button>
       </div>
     </article>`;
   }).join("") : `<p class="muted">Không có đơn ship đang xử lý.</p>`;
-  bindActions(); bindDeleteActions(); bindShipActions();
+  bindActions(); bindDeleteActions();
 }
 function renderBookings(items){
   const visible = items.filter(b => b.status !== "done" && b.status !== "cancelled");
@@ -596,7 +534,7 @@ function renderAnalytics(data){
   $("#analyticsDetail").innerHTML=`
     <article><span>Tổng đơn</span><b>${s.orders||0}</b></article><article><span>Đơn ship</span><b>${s.shipOrders||0}</b></article>
     <article><span>Đơn tại bàn</span><b>${s.tableOrders||0}</b></article><article><span>Đơn huỷ</span><b>${s.cancelledOrders||0}</b></article>
-    <article><span>Tiền ship</span><b>${money(s.shippingFee||0)}</b></article><article><span>Sản phẩm bán</span><b>${s.itemsSold||0}</b></article>
+    <article><span>Sản phẩm bán</span><b>${s.itemsSold||0}</b></article>
     <article><span>Khách có SĐT</span><b>${s.customers||0}</b></article><article><span>TB/đơn</span><b>${money(s.averageOrder||0)}</b></article>`;
   const rows=data.byDate||[];
   const max=Math.max(1,...rows.map(r=>Math.max(Number(r.revenue||0),Math.abs(Number(r.profit||0)))));
@@ -644,7 +582,6 @@ function openTableForm(t){
   f.name.value=t.name||t.id; f.seats.value=t.seats||4; f.zone.value=t.zone||""; f.status.value=t.locked?"locked":(t.status||"free"); f.locked.value=t.locked?"true":"false"; f.note.value=t.note||"";
   $("#tableModal").classList.add("show");
 }
-function fillSettingsForm(){ const f=$("#settingsForm"); if(!f) return; f.shopName.value=settingsCache.shopName||""; f.shippingFee.value=settingsCache.shippingFee??15000; f.freeShipFrom.value=settingsCache.freeShipFrom??0; }
 
 function bindActions(){
   $$(".action-btn[data-type]").forEach(btn=>btn.onclick=()=>{
@@ -662,7 +599,6 @@ function bindDeleteActions(){
   $$("[data-delete-order]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/orders?id=${encodeURIComponent(btn.dataset.deleteOrder)}`,{method:"DELETE"}); toast("Đã xoá đơn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá hẳn đơn"; $("#confirmMessage").textContent="Không thể hoàn tác."; $("#confirmModal").classList.add("show"); });
   $$("[data-delete-booking]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/bookings?id=${encodeURIComponent(btn.dataset.deleteBooking)}`,{method:"DELETE"}); toast("Đã xoá lịch đặt bàn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá hẳn đặt bàn"; $("#confirmMessage").textContent="Không thể hoàn tác."; $("#confirmModal").classList.add("show"); });
 }
-function bindShipActions(){ $$("[data-ship-edit]").forEach(btn=>btn.onclick=()=>{ $("#shipForm").reset(); $("#shipOrderId").value=btn.dataset.shipEdit; $("#shipForm").shippingFee.value=btn.dataset.fee||0; $("#shipModal").classList.add("show"); }); }
 function bindMenuActions(items){
   $$("[data-menu-edit]").forEach(btn=>btn.onclick=()=>openMenuForm(items.find(x=>String(x.id)===String(btn.dataset.menuEdit))));
   $$("[data-menu-delete]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/menu?id=${encodeURIComponent(btn.dataset.menuDelete)}`,{method:"DELETE"}); toast("Đã xoá món"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá món"; $("#confirmMessage").textContent="Bạn chắc chắn muốn xoá món?"; $("#confirmModal").classList.add("show"); });
@@ -671,6 +607,7 @@ function bindInventoryActions(items){
   $$("[data-inv-edit]").forEach(btn=>btn.onclick=()=>openInventoryForm(items.find(x=>String(x.id)===String(btn.dataset.invEdit))));
   $$("[data-inv-delete]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/inventory?id=${encodeURIComponent(btn.dataset.invDelete)}`,{method:"DELETE"}); toast("Đã xoá nguyên liệu"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá nguyên liệu"; $("#confirmMessage").textContent="Bạn chắc chắn?"; $("#confirmModal").classList.add("show"); });
 }
+
 function ensureSessionMenuModal(){
   if ($("#sessionMenuModal")) return;
   const wrap = document.createElement("div");
@@ -842,10 +779,6 @@ $("#sessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const
 $("#moveSessionCancelBtn").addEventListener("click",()=>$("#moveSessionModal").classList.remove("show"));
 $("#moveSessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); try{ if(data.toTable) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"move",id:data.id,toTable:String(data.toTable).toUpperCase().trim()})}); if(data.mergeTables) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"merge",id:data.id,tables:String(data.mergeTables).toUpperCase()})}); $("#moveSessionModal").classList.remove("show"); toast("Đã cập nhật phiên bàn"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
 
-$("#shipCancelBtn").addEventListener("click",()=>$("#shipModal").classList.remove("show"));
-$("#shipForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.id=$("#shipOrderId").value; data.shippingFee=Number(data.shippingFee||0); try{ await api("/api/orders",{method:"PUT",body:JSON.stringify(data)}); $("#shipModal").classList.remove("show"); toast("Đã cập nhật phí ship"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
-
-$("#settingsForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.shippingFee=Number(data.shippingFee||0); data.freeShipFrom=Number(data.freeShipFrom||0); try{ const result=await api("/api/settings",{method:"POST",body:JSON.stringify(data)}); settingsCache=result.settings||data; toast("Đã lưu cài đặt"); }catch(err){ toast(err.message,"error"); } });
 $("#archiveRunBtn").addEventListener("click",async()=>{ const year=$("#archiveYearInput").value||new Date().getFullYear(); const action=$("#archiveAction").value; try{ if(action==="view"){ const data=await api(`/api/archive?year=${encodeURIComponent(year)}`); $("#archiveResult").innerHTML=`Doanh thu năm ${year}: <b>${money(data.summary.revenue)}</b><br>Đơn ship: ${data.summary.shipOrders} • Đơn bàn: ${data.summary.tableOrders} • Huỷ: ${data.summary.cancelled}`; return; } if(action==="deleteYearRevenue" && String(year)===String(new Date().getFullYear())) return toast("Không được xoá năm hiện tại","error"); if(action==="deleteYearRevenue" && !confirm(`Xoá doanh thu năm ${year}? Không thể hoàn tác.`)) return; const data=await api("/api/archive",{method:"POST",body:JSON.stringify({action,year})}); toast(action==="closeYear"?"Đã chốt năm":"Đã xoá doanh thu năm cũ"); if(data.summary) $("#archiveResult").innerHTML=`Đã chốt năm ${year}: ${money(data.summary.revenue)}`; }catch(err){ toast(err.message,"error"); } });
 
 $("#confirmCancelBtn").addEventListener("click",()=>{ $("#confirmModal").classList.remove("show"); confirmJob=null; });
@@ -870,13 +803,6 @@ document.addEventListener("visibilitychange",()=>{ if(!document.hidden && pin) l
 
 if(pin) showDashboard(); else showPin();
 
-
-
-
-
-
-
-/* ===== fixed-real: close sessionMenuModal completely ===== */
 function closeSessionMenuModal(){
   const modal = document.getElementById("sessionMenuModal");
   if(!modal) return;
@@ -892,4 +818,3 @@ document.addEventListener("click", function(e){
   e.stopPropagation();
   closeSessionMenuModal();
 }, true);
-
