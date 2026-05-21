@@ -16,12 +16,22 @@
   }
 
   function hideOldShippingSettings() {
-    // Không xoá DOM cũ để tránh vỡ code, chỉ ẩn phần cài đặt vận hành cũ có Phí ship/Miễn ship.
-    $$("section, .section, .panel, form, .settings-card").forEach((el) => {
-      const text = (el.textContent || "").toLowerCase();
-      if (text.includes("cài đặt vận hành") || (text.includes("phí ship mặc định") && text.includes("miễn ship"))) {
-        el.classList.add("cg-old-shipping-hidden");
+    // Chỉ ẩn đúng form/field cài đặt ship cũ, không ẩn dashboard, section, panel hoặc danh sách đơn.
+    const labels = Array.from(document.querySelectorAll("label"));
+    labels.forEach((label) => {
+      const text = (label.textContent || "").toLowerCase();
+      const isOldShipField = text.includes("phí ship mặc định") || text.includes("miễn ship từ đơn");
+      if (!isOldShipField) return;
+      if (label.closest("#cgShippingSettingsPanel")) return;
+
+      const oldForm = label.closest("form");
+      if (oldForm && oldForm.id !== "cgShippingSettingsForm") {
+        oldForm.classList.add("cg-old-shipping-hidden");
+        return;
       }
+
+      const field = label.closest(".field") || label;
+      field.classList.add("cg-old-shipping-hidden");
     });
   }
 

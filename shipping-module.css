@@ -30,3 +30,19 @@
   gap: 12px;
   margin-top: 18px;
 }
+
+
+/* ===== v25: shipping safe hide guard ===== */
+main.cg-old-shipping-hidden,
+.admin-main.cg-old-shipping-hidden,
+.dashboard.cg-old-shipping-hidden,
+.admin-shell.cg-old-shipping-hidden,
+.section.cg-old-shipping-hidden,
+.panel.cg-old-shipping-hidden,
+article.cg-old-shipping-hidden,
+.admin-card.cg-old-shipping-hidden,
+.card.cg-old-shipping-hidden,
+#ordersList.cg-old-shipping-hidden,
+#dashboard.cg-old-shipping-hidden {
+  display: revert !important;
+}
