@@ -113,8 +113,29 @@
     };
   }
 
+
+  function patchNativeShipConfirm() {
+    if (window.__CG_PUBLIC_SHIP_CONFIRM_PATCHED_V29__) return;
+    window.__CG_PUBLIC_SHIP_CONFIRM_PATCHED_V29__ = true;
+
+    const nativeConfirm = window.confirm ? window.confirm.bind(window) : null;
+    window.confirm = function(message) {
+      const msg = String(message || "").toLowerCase();
+      if (
+        msg.includes("đơn giao hàng") ||
+        msg.includes("đặt ship") ||
+        msg.includes("phí ship") ||
+        msg.includes("giao hàng/ship")
+      ) {
+        return true;
+      }
+      return nativeConfirm ? nativeConfirm(message) : true;
+    };
+  }
+
   function init() {
     if (!window.CGSettings) return;
+    patchNativeShipConfirm();
     patchFetch();
     patchForms();
     new MutationObserver(patchForms).observe(document.body, { childList: true, subtree: true });
