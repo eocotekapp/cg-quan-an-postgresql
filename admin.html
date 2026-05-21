@@ -7,6 +7,12 @@
   <link rel="stylesheet" href="/styles.css?v=32">
   <link rel="stylesheet" href="/admin-session-view.css?v=35">
   <link rel="stylesheet" href="/admin-money-settings.css?v=37">
+  <style>
+    /* Biện pháp bảo vệ: Khử hoàn toàn hiển thị của phí ship và các nút sửa liên quan nếu có */
+    .edit-ship-btn, .btn-ship, [data-action="ship"], .shipping-fee-display, .order-card-ship-fee {
+      display: none !important;
+    }
+  </style>
 </head>
 <body class="admin-page">
   <header class="topbar admin-app-topbar">
@@ -45,7 +51,6 @@
             <button class="tab-btn" data-tab="menu" type="button">Menu món</button>
             <button class="tab-btn" data-tab="inventory" type="button">Kho</button>
             <button class="tab-btn" data-tab="analytics" type="button">Doanh thu</button>
-            <button class="tab-btn" data-tab="settings" type="button">Cài đặt</button>
           </div>
           <button id="refreshBtn" class="btn primary full" type="button">Tải lại dữ liệu</button>
           <small id="refreshHint" class="refresh-hint">Tự cập nhật mỗi 2 giây</small>
@@ -66,7 +71,7 @@
               </div>
               <span class="live-chip">● Tự động cập nhật</span>
             </div>
-<div id="orderViewModeBar" class="view-mode-bar" aria-label="Chế độ xem đơn">
+            <div id="orderViewModeBar" class="view-mode-bar" aria-label="Chế độ xem đơn">
               <button class="view-mode active" data-kind-filter="all" type="button">Tất cả</button>
               <button class="view-mode" data-kind-filter="bookings" type="button">Đơn đặt bàn</button>
               <button class="view-mode" data-kind-filter="orders" type="button">Đơn ship</button>
@@ -75,7 +80,7 @@
           </section>
 
           <section id="ordersPanel" class="hidden">
-            <div class="panel-title-row"><h2>Đơn giao hàng / ship</h2><p class="muted">Sửa ship, xử lý, hoàn thành hoặc xoá.</p></div>
+            <div class="panel-title-row"><h2>Đơn giao hàng / ship</h2><p class="muted">Xử lý, hoàn thành hoặc xoá đơn hàng.</p></div>
             <div id="ordersList" class="admin-list compact-list"></div>
           </section>
 
@@ -151,15 +156,6 @@
               <div id="archiveResult" class="archive-result muted"></div>
             </div>
           </section>
-
-          <section id="settingsPanel" class="hidden">
-            <div class="menu-admin-toolbar"><div><h2>Cài đặt vận hành</h2><p class="muted">Phí ship mặc định, miễn ship và tên quán.</p></div></div>
-            <form id="settingsForm" class="panel settings-form">
-              <label class="field"><span>Tên quán</span><input name="shopName"></label>
-              <div class="form-row"><label class="field"><span>Phí ship mặc định</span><input name="shippingFee" type="number" min="0"></label><label class="field"><span>Miễn ship từ đơn</span><input name="freeShipFrom" type="number" min="0"></label></div>
-              <button class="btn primary" type="submit">Lưu cài đặt</button>
-            </form>
-          </section>
         </section>
       </div>
     </section>
@@ -223,11 +219,11 @@
     <div class="modal-actions"><button id="moveSessionCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Lưu</button></div>
   </form></div>
 
-  <div id="shipModal" class="modal"><form id="shipForm" class="modal-card">
-    <div class="success-icon">🛵</div><h2>Sửa phí ship</h2><input type="hidden" id="shipOrderId" name="id">
-    <label class="field"><span>Phí ship mới</span><input name="shippingFee" type="number" min="0" required></label>
-    <label class="field"><span>Ghi chú báo khách</span><textarea name="shippingNote"></textarea></label>
-    <div class="modal-actions"><button id="shipCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Lưu</button></div>
+  <div id="shipModal" class="modal" style="display: none !important; opacity: 0 !important; pointer-events: none !important;"><form id="shipForm" class="modal-card" style="display: none !important;">
+    <input type="hidden" id="shipOrderId" name="id">
+    <input type="hidden" name="shippingFee" value="0">
+    <textarea name="shippingNote" style="display: none !important;"></textarea>
+    <button id="shipCancelBtn" type="button" style="display: none !important;"></button>
   </form></div>
 
   <div id="confirmModal" class="modal"><div class="modal-card"><div class="warn-icon">!</div><h2 id="confirmTitle">Xác nhận</h2><p id="confirmMessage">Bạn chắc chắn?</p><div class="modal-actions"><button id="confirmCancelBtn" class="btn soft" type="button">Huỷ</button><button id="confirmOkBtn" class="btn primary" type="button">Đồng ý</button></div></div></div>
