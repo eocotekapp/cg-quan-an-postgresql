@@ -775,7 +775,30 @@ $("#tableForm").addEventListener("submit",async e=>{ e.preventDefault(); const d
 
 $("#openSessionBtn").addEventListener("click",()=>$("#sessionModal").classList.add("show"));
 $("#sessionCancelBtn").addEventListener("click",()=>$("#sessionModal").classList.remove("show"));
-$("#sessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.action="open"; data.table=String(data.table||"").toUpperCase().trim(); data.guests=Number(data.guests||1); try{ await api("/api/sessions",{method:"POST",body:JSON.stringify(data)}); $("#sessionModal").classList.remove("show"); toast("Đã mở phiên bàn"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
+
+// Validate Phone Here
+$("#sessionForm").addEventListener("submit",async e=>{ 
+  e.preventDefault(); 
+  const data=Object.fromEntries(new FormData(e.target).entries()); 
+  
+  if(data.phone && !/^[0-9]{10}$/.test(data.phone.trim())){
+    return toast("Số điện thoại phải gồm đúng 10 chữ số", "error");
+  }
+
+  data.action="open"; 
+  data.table=String(data.table||"").toUpperCase().trim(); 
+  data.guests=Number(data.guests||1); 
+  try{ 
+    await api("/api/sessions",{method:"POST",body:JSON.stringify(data)}); 
+    $("#sessionModal").classList.remove("show"); 
+    toast("Đã mở phiên bàn"); 
+    loadDashboard(); 
+    bindActions();
+  } catch(err){ 
+    toast(err.message,"error"); 
+  } 
+});
+
 $("#moveSessionCancelBtn").addEventListener("click",()=>$("#moveSessionModal").classList.remove("show"));
 $("#moveSessionForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); try{ if(data.toTable) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"move",id:data.id,toTable:String(data.toTable).toUpperCase().trim()})}); if(data.mergeTables) await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"merge",id:data.id,tables:String(data.mergeTables).toUpperCase()})}); $("#moveSessionModal").classList.remove("show"); toast("Đã cập nhật phiên bàn"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
 
