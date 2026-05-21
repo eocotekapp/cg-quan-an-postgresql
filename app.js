@@ -18,7 +18,6 @@ let selectedTable = "B01";
 let featuredId = null;
 let publicTableStatus = [];
 let tableRefreshTimer = null;
-let shopSettings = { shippingFee: 15000, freeShipFrom: 0 };
 
 async function api(path, options = {}) {
   const res = await cgFetch(path, { headers: { "Content-Type": "application/json" }, ...options });
@@ -57,13 +56,6 @@ function getCartSubtotal() {
   return getCartPreorderItems().reduce((s,i)=>s+i.price*i.qty,0);
 }
 
-async function loadShopSettings() {
-  try {
-    const data = await api("/api/settings");
-    shopSettings = data.settings || shopSettings;
-  } catch (err) { console.warn(err); }
-  renderCart();
-}
 async function loadMenu() {
   try {
     const data = await api("/api/menu");
@@ -177,7 +169,7 @@ function renderCart() {
   $("#cartTotal").textContent = money(cartTotalValue());
 }
 function openCart(){ $("#cartDrawer").classList.add("open"); $("#overlay").classList.add("show"); }
-function closeCart(){ $("#cartDrawer").classList.remove("open"); $("#overlay").classList.remove("show"); }
+function closeCart(){ $("#cartDrawer").classList.remove("open"); $("#overlay").classList.add("remove"); }
 
 function tableStatusLabel(status, locked) {
   if (locked) return "khóa";
@@ -253,13 +245,10 @@ async function submitOrder(e) {
   setLoading(btn, true, "Đang gửi đơn...");
   try {
     const customer = Object.fromEntries(new FormData(e.target).entries());
-    const subtotal = cart.reduce((s,i)=>s + Number(i.price || 0) * Number(i.qty || 1), 0);
-    const discount = coupon === "QUAN10" ? Math.round(subtotal * 0.1) : 0;
-    const shippingFee = shopSettings.freeShipFrom > 0 && subtotal >= shopSettings.freeShipFrom ? 0 : Number(shopSettings.shippingFee || 0);
-    const finalTotal = subtotal - discount + shippingFee;
-    const ok = confirm(`Đây là đơn giao hàng/ship. Phí ship dự kiến: ${money(shippingFee)}. Tổng tạm tính: ${money(finalTotal)}. Shop có thể gọi lại nếu địa chỉ xa cần đổi phí ship. Bạn xác nhận đặt ship chứ?`);
-    if (!ok) return;
-    const result = await api("/api/orders", { method:"POST", body:JSON.stringify({ customer, items:cart, coupon, shippingFee }) });
+    
+    // Gửi trực tiếp, KHÔNG tính phí ship và KHÔNG bật popup confirm
+    const result = await api("/api/orders", { method:"POST", body:JSON.stringify({ customer, items:cart, coupon }) });
+    
     clearCartCompletely();
     e.target.reset();
     closeCart();
@@ -354,5 +343,4 @@ $("#dineInForm")?.addEventListener("submit", submitDineInOrder);
 setDefaultBookingDateTime();
 setupTableMap();
 renderCart();
-loadShopSettings();
 loadMenu();
