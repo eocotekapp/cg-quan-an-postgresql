@@ -45,7 +45,6 @@
             <button class="tab-btn" data-tab="menu" type="button">Menu món</button>
             <button class="tab-btn" data-tab="inventory" type="button">Kho</button>
             <button class="tab-btn" data-tab="analytics" type="button">Doanh thu</button>
-            <button class="tab-btn" data-tab="settings" type="button">Cài đặt</button>
           </div>
           <button id="refreshBtn" class="btn primary full" type="button">Tải lại dữ liệu</button>
           <small id="refreshHint" class="refresh-hint">Tự cập nhật mỗi 2 giây</small>
@@ -150,15 +149,6 @@
               <button id="archiveRunBtn" class="btn primary" type="button">Thực hiện</button>
               <div id="archiveResult" class="archive-result muted"></div>
             </div>
-          </section>
-
-          <section id="settingsPanel" class="hidden">
-            <div class="menu-admin-toolbar"><div><h2>Cài đặt vận hành</h2><p class="muted">Phí ship mặc định, miễn ship và tên quán.</p></div></div>
-            <form id="settingsForm" class="panel settings-form">
-              <label class="field"><span>Tên quán</span><input name="shopName"></label>
-              <div class="form-row"><label class="field"><span>Phí ship mặc định</span><input name="shippingFee" type="number" min="0"></label><label class="field"><span>Miễn ship từ đơn</span><input name="freeShipFrom" type="number" min="0"></label></div>
-              <button class="btn primary" type="submit">Lưu cài đặt</button>
-            </form>
           </section>
         </section>
       </div>
