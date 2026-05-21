@@ -21,7 +21,7 @@
         <p class="eyebrow">Admin</p>
         <h1>Nhập PIN quản trị</h1>
         <p class="muted">PIN lấy từ biến môi trường ADMIN_PIN trên Vercel.</p>
-        <label class="field"><span>PIN admin</span><input id="pinInput" type="password" inputmode="numeric" required></label>
+        <label class="field"><span>PIN admin</span><input id="pinInput" type="password" inputmode="numeric" pattern="[0-9]*" required></label>
         <button class="btn primary full" type="submit">Vào admin</button>
       </form>
     </section>
@@ -142,7 +142,7 @@
             <div class="archive-box">
               <h3>Lưu trữ & dọn doanh thu năm cũ</h3>
               <div class="form-row">
-                <label class="field"><span>Năm cần xem/xử lý</span><input id="archiveYearInput" type="number" min="2020" max="2100"></label>
+                <label class="field"><span>Năm cần xem/xử lý</span><input id="archiveYearInput" type="number" min="2020" max="2100" inputmode="numeric" pattern="[0-9]*"></label>
                 <label class="field"><span>Thao tác</span><select id="archiveAction"><option value="view">Xem báo cáo năm</option><option value="closeYear">Chốt báo cáo năm</option><option value="deleteYearRevenue">Xoá doanh thu năm cũ</option></select></label>
               </div>
               <button id="archiveRunBtn" class="btn primary" type="button">Thực hiện</button>
@@ -158,8 +158,8 @@
     <div class="success-icon">🍽️</div><h2 id="menuModalTitle">Thêm món</h2>
     <input type="hidden" name="id" id="menuIdInput">
     <label class="field"><span>Tên món</span><input name="name" required></label>
-    <div class="form-row"><label class="field"><span>Giá gốc</span><input name="originalPrice" type="number" min="0"></label><label class="field"><span>Giá bán</span><input name="price" type="number" min="0" required></label></div>
-    <div class="form-row"><label class="field"><span>Danh mục</span><select name="category"><option value="main">Món chính</option><option value="drink">Đồ uống</option><option value="snack">Ăn vặt</option><option value="dessert">Tráng miệng</option></select></label><label class="field"><span>Độ ưu tiên</span><input name="popular" type="number" min="0" value="50"></label></div>
+    <div class="form-row"><label class="field"><span>Giá gốc</span><input name="originalPrice" type="number" min="0" inputmode="numeric" pattern="[0-9]*"></label><label class="field"><span>Giá bán</span><input name="price" type="number" min="0" required inputmode="numeric" pattern="[0-9]*"></label></div>
+    <div class="form-row"><label class="field"><span>Danh mục</span><select name="category"><option value="main">Món chính</option><option value="drink">Đồ uống</option><option value="snack">Ăn vặt</option><option value="dessert">Tráng miệng</option></select></label><label class="field"><span>Độ ưu tiên</span><input name="popular" type="number" min="0" value="50" inputmode="numeric" pattern="[0-9]*"></label></div>
     <label class="field"><span>Icon nếu không có ảnh</span><input name="icon" placeholder="🍗"></label>
     <label class="field"><span>Link ảnh món</span><input name="imageUrl" placeholder="https://..."></label>
     <label class="field"><span>Cách hiển thị ảnh</span><select name="imageFit"><option value="custom-crop">Tự căn ảnh</option><option value="cover-center">Cắt giữa</option><option value="cover-top">Cắt trên</option><option value="cover-bottom">Cắt dưới</option><option value="contain-dark">Hiện đủ nền tối</option><option value="contain-light">Hiện đủ nền sáng</option></select></label>
@@ -177,9 +177,9 @@
   <div id="inventoryModal" class="modal"><form id="inventoryForm" class="modal-card menu-form-card">
     <div class="success-icon">📦</div><h2 id="inventoryModalTitle">Nguyên liệu</h2><input type="hidden" name="id" id="inventoryIdInput">
     <label class="field"><span>Tên nguyên liệu</span><input name="name" required></label>
-    <div class="form-row"><label class="field"><span>Đơn vị</span><input name="unit" placeholder="kg"></label><label class="field"><span>Tồn</span><input name="stock" type="number" min="0" step="0.01"></label></div>
-    <div class="form-row"><label class="field"><span>Cảnh báo sắp hết</span><input name="minStock" type="number" min="0" step="0.01"></label><label class="field"><span>Nhà cung cấp</span><input name="supplier"></label></div>
-    <div class="form-row"><label class="field"><span>Nhập gần nhất</span><input name="lastImportQty" type="number" min="0" step="0.01"></label><label class="field"><span>Giá nhập</span><input name="lastImportPrice" type="number" min="0"></label></div>
+    <div class="form-row"><label class="field"><span>Đơn vị</span><input name="unit" placeholder="kg"></label><label class="field"><span>Tồn</span><input name="stock" type="number" min="0" step="0.01" inputmode="decimal"></label></div>
+    <div class="form-row"><label class="field"><span>Cảnh báo sắp hết</span><input name="minStock" type="number" min="0" step="0.01" inputmode="decimal"></label><label class="field"><span>Nhà cung cấp</span><input name="supplier"></label></div>
+    <div class="form-row"><label class="field"><span>Nhập gần nhất</span><input name="lastImportQty" type="number" min="0" step="0.01" inputmode="decimal"></label><label class="field"><span>Giá nhập</span><input name="lastImportPrice" type="number" min="0" inputmode="numeric" pattern="[0-9]*"></label></div>
     <label class="field"><span>Ngày nhập</span><input name="lastImportDate" type="date"></label>
     <label class="field"><span>Ghi chú</span><textarea name="note"></textarea></label>
     <div class="modal-actions"><button id="inventoryCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Lưu</button></div>
@@ -187,7 +187,7 @@
 
   <div id="tableModal" class="modal"><form id="tableForm" class="modal-card menu-form-card">
     <div class="success-icon">🪑</div><h2 id="tableModalTitle">Quản lý bàn</h2><input type="hidden" name="id" id="tableIdInput">
-    <div class="form-row"><label class="field"><span>Tên bàn</span><input name="name"></label><label class="field"><span>Số ghế</span><input name="seats" type="number" min="1"></label></div>
+    <div class="form-row"><label class="field"><span>Tên bàn</span><input name="name"></label><label class="field"><span>Số ghế</span><input name="seats" type="number" min="1" inputmode="numeric" pattern="[0-9]*"></label></div>
     <label class="field"><span>Khu vực</span><input name="zone"></label>
     <label class="field"><span>Trạng thái</span><select name="status"><option value="free">Trống</option><option value="reserved">Đã đặt</option><option value="using">Đang dùng</option><option value="cleaning">Đang dọn</option><option value="locked">Khoá</option></select></label>
     <label class="field"><span>Ghi chú</span><textarea name="note"></textarea></label>
@@ -199,8 +199,8 @@
     <div class="success-icon">🍺</div><h2>Mở phiên bàn</h2>
     <label class="field"><span>Bàn cần mở</span><input name="table" placeholder="B03" required></label>
     <label class="field"><span>Tên khách</span><input name="customerName"></label>
-    <label class="field"><span>SĐT nếu có</span><input name="phone"></label>
-    <label class="field"><span>Số người</span><input name="guests" type="number" min="1" value="2"></label>
+    <label class="field"><span>SĐT nếu có</span><input name="phone" type="tel" inputmode="numeric" pattern="[0-9]{10}" minlength="10" maxlength="10" title="Vui lòng nhập đúng 10 chữ số"></label>
+    <label class="field"><span>Số người</span><input name="guests" type="number" min="1" value="2" inputmode="numeric" pattern="[0-9]*"></label>
     <label class="field"><span>Ghi chú</span><textarea name="note"></textarea></label>
     <div class="modal-actions"><button id="sessionCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Mở bàn</button></div>
   </form></div>
