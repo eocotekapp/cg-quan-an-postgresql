@@ -31,6 +31,31 @@ async function api(path, options = {}) {
   if (!res.ok || data.ok === false) throw new Error(data.error || "Có lỗi xảy ra");
   return data;
 }
+async function uploadMenuImageIfNeeded(form) {
+  const fileInput = document.getElementById("menuImageFile");
+  const file = fileInput?.files?.[0];
+
+  if (!file) return form.imageUrl?.value?.trim?.() || "";
+
+  if (!file.type || !file.type.startsWith("image/")) throw new Error("File chọn không phải ảnh");
+
+  const max = 8 * 1024 * 1024;
+  if (file.size > max) throw new Error("Ảnh quá lớn. Tối đa 8MB");
+
+  const fd = new FormData();
+  fd.append("image", file);
+
+  const res = await cgFetch("/api/upload", {
+    method: "POST",
+    headers: { "x-admin-pin": pin },
+    body: fd
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) throw new Error(data.error || "Upload ảnh lỗi");
+  return data.url || data.relativeUrl || "";
+}
+
 function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
 function menuImageHtml(item, className = "admin-menu-thumb"){
   const fitClass = escapeHtml(item?.imageFit || "custom-crop");
@@ -556,75 +581,20 @@ function renderAnalytics(data){
   $("#topItemsList").innerHTML=(data.topItems||[]).length ? (data.topItems||[]).map(i=>`<article class="top-item"><div><b>${escapeHtml(i.name)}</b><span>Đã bán: ${i.qty}</span></div><div><span>Doanh thu</span><b>${money(i.revenue)}</b></div><div><span>Giá vốn</span><b>${money(i.cost)}</b></div><div><span>Lãi</span><b class="${i.profit>=0?"good":"bad"}">${money(i.profit)}</b></div></article>`).join("") : `<p class="muted">Chưa có món phát sinh doanh thu.</p>`;
 }
 
-
-const MENU_IMAGE_MAX_BYTES = 900 * 1024; // Giới hạn file ảnh sau nén đúng yêu cầu: tối đa 900KB.
-const MENU_IMAGE_MAX_SIDE = 1280;
-let menuImageRemoved = false;
-let pendingMenuImageDataUrl = "";
-function setMenuImageStatus(text, type = ""){
-  const el = $("#menuImageStatus");
-  if(!el) return;
-  el.textContent = text;
-  el.className = type;
-}
-function dataUrlToBlob(dataUrl){
-  const arr = String(dataUrl).split(",");
-  const mime = (arr[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
-  const bin = atob(arr[1] || "");
-  const bytes = new Uint8Array(bin.length);
-  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
-  return new Blob([bytes], { type:mime });
-}
-function canvasToBlob(canvas, type, quality){
-  return new Promise(resolve => canvas.toBlob(resolve, type, quality));
-}
-function loadImageFromFile(file){
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error("Không đọc được ảnh"));
-    img.src = URL.createObjectURL(file);
-  });
-}
-async function resizeMenuImageFile(file){
-  if(!file || !file.type || !file.type.startsWith("image/")) throw new Error("Vui lòng chọn đúng file ảnh");
-  const img = await loadImageFromFile(file);
-  const scale = Math.min(1, MENU_IMAGE_MAX_SIDE / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
-  let width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
-  let height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d", { alpha:false });
-
-  for(let side = MENU_IMAGE_MAX_SIDE; side >= 560; side -= 130){
-    const s = Math.min(1, side / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
-    width = Math.max(1, Math.round((img.naturalWidth || img.width) * s));
-    height = Math.max(1, Math.round((img.naturalHeight || img.height) * s));
-    canvas.width = width; canvas.height = height;
-    ctx.fillStyle = "#111";
-    ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(img, 0, 0, width, height);
-    for(let quality = 0.86; quality >= 0.34; quality -= 0.06){
-      let blob = await canvasToBlob(canvas, "image/webp", quality);
-      if(!blob) blob = await canvasToBlob(canvas, "image/jpeg", quality);
-      if(blob && blob.size <= MENU_IMAGE_MAX_BYTES){
-        return await new Promise(resolve => {
-          const reader = new FileReader();
-          reader.onload = () => resolve({ dataUrl: reader.result, size: blob.size, width, height });
-          reader.readAsDataURL(blob);
-        });
-      }
-    }
-  }
-  throw new Error("Ảnh vẫn lớn sau khi nén. Hãy chọn/cắt ảnh nhỏ hơn rồi thử lại.");
-}
-
 function updateCropPreview(){
   const f=$("#menuForm"), img=$("#cropPreviewImg");
   if(!f || !img) return;
   const zoom=Number($("#cropZoom").value||100), x=Number($("#cropX").value||50), y=Number($("#cropY").value||50);
   f.imageZoom.value=zoom; f.imagePosX.value=x; f.imagePosY.value=y;
   if(f.imageFit.value!=="contain-dark" && f.imageFit.value!=="contain-light") f.imageFit.value="custom-crop";
-  img.src=f.imageUrl.value.trim()||"";
+  const file=document.getElementById("menuImageFile")?.files?.[0];
+  if(file){
+    if(img.dataset.objectUrl) URL.revokeObjectURL(img.dataset.objectUrl);
+    img.dataset.objectUrl=URL.createObjectURL(file);
+    img.src=img.dataset.objectUrl;
+  }else{
+    img.src=f.imageUrl.value.trim()||"";
+  }
   img.className=f.imageFit.value||"custom-crop";
   img.style.setProperty("--img-zoom", zoom/100);
   img.style.setProperty("--img-x", x+"%");
@@ -637,7 +607,8 @@ function openMenuForm(item=null){
   $("#menuIdInput").value=item?.id||"";
   f.name.value=item?.name||""; f.originalPrice.value=item?.originalPrice??""; f.price.value=item?.price??"";
   f.category.value=item?.category||"main"; f.popular.value=item?.popular??50; f.icon.value=item?.icon||"";
-  f.imageUrl.value=item?.imageUrl||""; pendingMenuImageDataUrl=""; menuImageRemoved=false; const fileInput=$("#menuImageFile"); if(fileInput) fileInput.value=""; setMenuImageStatus(item?.imageUrl ? "Đang dùng ảnh đã lưu. Chọn ảnh mới nếu muốn thay." : "Chưa có ảnh món."); f.imageFit.value=item?.imageFit||"custom-crop";
+  if(document.getElementById("menuImageFile")) document.getElementById("menuImageFile").value="";
+  f.imageUrl.value=item?.imageUrl||""; f.imageFit.value=item?.imageFit||"custom-crop";
   f.imageZoom.value=item?.imageZoom??100; f.imagePosX.value=item?.imagePosX??50; f.imagePosY.value=item?.imagePosY??50;
   $("#cropZoom").value=f.imageZoom.value; $("#cropX").value=f.imagePosX.value; $("#cropY").value=f.imagePosY.value;
   f.desc.value=item?.desc||""; f.tags.value=Array.isArray(item?.tags)?item.tags.join(", "):""; f.available.value=item?.available===false?"false":"true";
@@ -839,7 +810,8 @@ $("#addMenuBtn").addEventListener("click",()=>openMenuForm());
 $("#menuCancelBtn").addEventListener("click",()=>$("#menuModal").classList.remove("show"));
 $("#menuForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const data=Object.fromEntries(new FormData(e.target).entries());
+  const form=e.target;
+  const data=Object.fromEntries(new FormData(form).entries());
   delete data.imageFile;
   data.originalPrice=Number(data.originalPrice||0);
   data.price=Number(data.price||0);
@@ -848,30 +820,26 @@ $("#menuForm").addEventListener("submit",async e=>{
   data.imagePosX=Number(data.imagePosX??50);
   data.imagePosY=Number(data.imagePosY??50);
   data.available=data.available==="true";
-  if(menuImageRemoved) data.imageUrl="";
-  if(pendingMenuImageDataUrl){
-    data.imageData = pendingMenuImageDataUrl;
-    data.imageUrl = "";
-  }
-  if((data.imageData || data.imageUrl) && String(data.imageData || data.imageUrl).startsWith("data:image/") && String(data.imageData || data.imageUrl).length > 2.2 * 1024 * 1024){
-    toast("Ảnh đã nén vẫn quá lớn để gửi lên server. Hãy chọn ảnh khác.", "error");
-    setMenuImageStatus("Ảnh đã nén vẫn quá lớn để gửi lên server. Hãy chọn ảnh khác.", "error");
-    return;
-  }
   try{
-    const result = await api("/api/menu",{method:"POST",body:JSON.stringify(data)});
+    const uploadedUrl=await uploadMenuImageIfNeeded(form);
+    data.imageUrl=uploadedUrl||"";
+    await api("/api/menu",{method:"POST",body:JSON.stringify(data)});
     $("#menuModal").classList.remove("show");
-    toast(result?.imageSaved ? "Đã lưu món + ảnh" : (result?.hasImage ? "Đã lưu món + giữ ảnh cũ" : "Đã lưu món"));
-    if(result?.imageUrl){
-      const saved = menuCache.find(x => String(x.id) === String(result.id));
-      if(saved) saved.imageUrl = result.imageUrl;
-      pendingMenuImageDataUrl = "";
-    }
-    await loadDashboard();
+    toast("Đã lưu món");
+    loadDashboard();
     bindActions();
-  }catch(err){ toast(err.message,"error"); }
+  }catch(err){
+    toast(err.message,"error");
+  }
 });
-$("#menuImageFile")?.addEventListener("change", async e=>{ const file=e.target.files && e.target.files[0]; if(!file) return; try{ setMenuImageStatus("Đang resize và nén ảnh..."); const out=await resizeMenuImageFile(file); pendingMenuImageDataUrl=out.dataUrl; $("#menuForm").imageUrl.value=out.dataUrl; menuImageRemoved=false; setMenuImageStatus(`Đã nén: ${Math.round(out.size/1024)}KB • ${out.width}×${out.height} • sẵn sàng lưu`, "ok"); updateCropPreview(); }catch(err){ e.target.value=""; setMenuImageStatus(err.message, "error"); toast(err.message,"error"); } }); $("#removeMenuImageBtn")?.addEventListener("click", ()=>{ const f=$("#menuForm"); f.imageUrl.value=""; pendingMenuImageDataUrl=""; const fileInput=$("#menuImageFile"); if(fileInput) fileInput.value=""; menuImageRemoved=true; setMenuImageStatus("Đã xoá ảnh. Khi lưu, món sẽ dùng icon."); updateCropPreview(); }); $("#menuForm").imageFit.addEventListener("change", updateCropPreview); $("#cropZoom").addEventListener("input", updateCropPreview); $("#cropX").addEventListener("input", updateCropPreview); $("#cropY").addEventListener("input", updateCropPreview); $("#cropResetBtn").addEventListener("click", resetCropPreview);
+document.getElementById("menuImageFile")?.addEventListener("change", updateCropPreview);
+document.getElementById("menuImageClearBtn")?.addEventListener("click", ()=>{
+  const f=$("#menuForm");
+  if(document.getElementById("menuImageFile")) document.getElementById("menuImageFile").value="";
+  if(f?.imageUrl) f.imageUrl.value="";
+  updateCropPreview();
+});
+$("#menuForm").imageFit.addEventListener("change", updateCropPreview); $("#cropZoom").addEventListener("input", updateCropPreview); $("#cropX").addEventListener("input", updateCropPreview); $("#cropY").addEventListener("input", updateCropPreview); $("#cropResetBtn").addEventListener("click", resetCropPreview);
 
 $("#addInventoryBtn").addEventListener("click",()=>openInventoryForm());
 $("#inventoryCancelBtn").addEventListener("click",()=>$("#inventoryModal").classList.remove("show"));

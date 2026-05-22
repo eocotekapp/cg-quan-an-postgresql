@@ -161,9 +161,13 @@
     <div class="form-row"><label class="field"><span>Giá gốc</span><input name="originalPrice" type="number" min="0" inputmode="numeric" pattern="[0-9]*"></label><label class="field"><span>Giá bán</span><input name="price" type="number" min="0" required inputmode="numeric" pattern="[0-9]*"></label></div>
     <div class="form-row"><label class="field"><span>Danh mục</span><select name="category"><option value="main">Món chính</option><option value="drink">Đồ uống</option><option value="snack">Ăn vặt</option><option value="dessert">Tráng miệng</option></select></label><label class="field"><span>Độ ưu tiên</span><input name="popular" type="number" min="0" value="50" inputmode="numeric" pattern="[0-9]*"></label></div>
     <label class="field"><span>Icon nếu không có ảnh</span><input name="icon" placeholder="🍗"></label>
-    <input type="hidden" name="imageUrl" id="menuImageUrlInput">
-    <label class="field image-upload-field"><span>Ảnh món</span><input name="imageFile" id="menuImageFile" type="file" accept="image/*"><small>Chọn ảnh từ điện thoại. Hệ thống tự resize/nén ảnh trước khi lưu, đảm bảo ảnh sau lưu dưới giới hạn 900KB.</small></label>
-    <div class="image-upload-actions"><button id="removeMenuImageBtn" class="btn soft" type="button">Xoá ảnh món</button><small id="menuImageStatus">Chưa chọn ảnh mới.</small></div>
+    <label class="field">
+      <span>Ảnh món</span>
+      <input id="menuImageFile" name="imageFile" type="file" accept="image/*">
+      <input id="menuImageUrl" name="imageUrl" type="hidden">
+      <small>Chọn ảnh trực tiếp từ album. Ảnh sẽ upload lên server Android.</small>
+    </label>
+    <button id="menuImageClearBtn" class="btn soft full" type="button">Xoá ảnh món</button>
     <label class="field"><span>Cách hiển thị ảnh</span><select name="imageFit"><option value="custom-crop">Tự căn ảnh</option><option value="cover-center">Cắt giữa</option><option value="cover-top">Cắt trên</option><option value="cover-bottom">Cắt dưới</option><option value="contain-dark">Hiện đủ nền tối</option><option value="contain-light">Hiện đủ nền sáng</option></select></label>
     <input type="hidden" name="imageZoom" value="100"><input type="hidden" name="imagePosX" value="50"><input type="hidden" name="imagePosY" value="50">
     <div class="crop-editor">

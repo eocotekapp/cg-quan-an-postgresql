@@ -4,7 +4,7 @@
   "description": "CG Quán Ăn - table session POS, time-based booking lock, add-items to table bill.",
   "main": "index.html",
   "scripts": {
-    "check": "node -c lib/_db.js && node -c lib/_utils.js && node -c lib/_telegram.js && node -c lib/_bookingTime.js && node -c api/menu.js && node -c api/orders.js && node -c api/bookings.js && node -c api/tables.js && node -c api/status.js && node -c api/admin-check.js && node -c api/analytics.js && node -c api/settings.js && node -c api/sessions.js && node -c api/inventory.js && node -c api/archive.js"
+    "check": "node -c api/_db.js && node -c api/_utils.js && node -c api/_telegram.js && node -c api/_bookingTime.js && node -c api/menu.js && node -c api/orders.js && node -c api/bookings.js && node -c api/tables.js && node -c api/status.js && node -c api/admin-check.js && node -c api/analytics.js && node -c api/settings.js && node -c api/sessions.js && node -c api/inventory.js && node -c api/archive.js && node -c api/upload.js && node -c api/_uploadsStatic.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
