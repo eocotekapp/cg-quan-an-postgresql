@@ -851,7 +851,7 @@ $("#menuForm").addEventListener("submit",async e=>{
   if(menuImageRemoved) data.imageUrl="";
   if(pendingMenuImageDataUrl){
     data.imageData = pendingMenuImageDataUrl;
-    data.imageUrl = pendingMenuImageDataUrl;
+    data.imageUrl = "";
   }
   if((data.imageData || data.imageUrl) && String(data.imageData || data.imageUrl).startsWith("data:image/") && String(data.imageData || data.imageUrl).length > 2.2 * 1024 * 1024){
     toast("Ảnh đã nén vẫn quá lớn để gửi lên server. Hãy chọn ảnh khác.", "error");
