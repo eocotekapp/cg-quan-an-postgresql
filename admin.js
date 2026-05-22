@@ -557,7 +557,7 @@ function renderAnalytics(data){
 }
 
 
-const MENU_IMAGE_MAX_BYTES = 620 * 1024; // Nhỏ hơn 900KB để khi đổi sang base64 gửi qua API vẫn không vượt giới hạn request.
+const MENU_IMAGE_MAX_BYTES = 420 * 1024; // Nén thấp hơn 900KB vì ảnh sẽ đi qua JSON/base64 trước khi lưu vào database.
 const MENU_IMAGE_MAX_SIDE = 1080;
 let menuImageRemoved = false;
 function setMenuImageStatus(text, type = ""){
@@ -848,7 +848,7 @@ $("#menuForm").addEventListener("submit",async e=>{
   data.imagePosY=Number(data.imagePosY??50);
   data.available=data.available==="true";
   if(menuImageRemoved) data.imageUrl="";
-  if(data.imageUrl && String(data.imageUrl).startsWith("data:image/") && String(data.imageUrl).length > 900 * 1024){
+  if(data.imageUrl && String(data.imageUrl).startsWith("data:image/") && String(data.imageUrl).length > 780 * 1024){
     toast("Ảnh đã nén vẫn quá lớn để lưu. Hãy chọn ảnh khác.", "error");
     setMenuImageStatus("Ảnh đã nén vẫn quá lớn để lưu. Hãy chọn ảnh khác.", "error");
     return;
@@ -857,6 +857,10 @@ $("#menuForm").addEventListener("submit",async e=>{
     const result = await api("/api/menu",{method:"POST",body:JSON.stringify(data)});
     $("#menuModal").classList.remove("show");
     toast(result?.hasImage ? "Đã lưu món + ảnh" : "Đã lưu món");
+    if(result?.imageUrl){
+      const saved = menuCache.find(x => String(x.id) === String(result.id));
+      if(saved) saved.imageUrl = result.imageUrl;
+    }
     await loadDashboard();
     bindActions();
   }catch(err){ toast(err.message,"error"); }
