@@ -5,6 +5,14 @@ const { send, requireAdmin } = require("./_utils");
 
 const MAX_BYTES = Number(process.env.UPLOAD_MAX_BYTES || 8 * 1024 * 1024);
 
+function setCors(req, res) {
+  const origin = req.headers.origin || "*";
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Vary", "Origin");
+  res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type,x-admin-pin");
+}
+
 // Android/Termux nên set UPLOAD_DIR=/storage/emulated/0/android-server/uploads
 // Nếu không set, mặc định lưu vào thư mục uploads cạnh code server hiện tại.
 function getUploadDir() {
@@ -96,6 +104,11 @@ function parseMultipart(buffer, boundary) {
 
 module.exports = async function handler(req, res) {
   try {
+    setCors(req, res);
+    if (req.method === "OPTIONS") {
+      res.statusCode = 204;
+      return res.end();
+    }
     if (req.method !== "POST") return send(res, 405, { ok:false, error:"Method not allowed" });
     if (!requireAdmin(req, res)) return;
 
