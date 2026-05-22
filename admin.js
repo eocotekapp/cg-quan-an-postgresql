@@ -38,7 +38,7 @@ function menuImageHtml(item, className = "admin-menu-thumb"){
   const x = Number(item?.imagePosX ?? 50);
   const y = Number(item?.imagePosY ?? 50);
   if (item?.imageUrl) {
-    return `<img class="${escapeHtml(className)} ${fitClass}" style="--img-zoom:${zoom};--img-x:${x}%;--img-y:${y}%" src="${escapeHtml(cgApiUrl(item.imageUrl))}" alt="${escapeHtml(item.name || "Món ăn")}" loading="lazy">`;
+    return `<img class="${escapeHtml(className)} ${fitClass}" style="--img-zoom:${zoom};--img-x:${x}%;--img-y:${y}%" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name || "Món ăn")}" loading="lazy">`;
   }
   return `<span class="${escapeHtml(className)} no-image-thumb">${escapeHtml(item?.icon || "🍽️")}</span>`;
 }
@@ -557,48 +557,64 @@ function renderAnalytics(data){
 }
 
 
-function readFileAsDataUrl(file){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=()=>resolve(String(reader.result||""));
-    reader.onerror=()=>reject(new Error("Không đọc được ảnh"));
-    reader.readAsDataURL(file);
+const MENU_IMAGE_MAX_BYTES = 900 * 1024;
+const MENU_IMAGE_MAX_SIDE = 1280;
+let menuImageRemoved = false;
+function setMenuImageStatus(text, type = ""){
+  const el = $("#menuImageStatus");
+  if(!el) return;
+  el.textContent = text;
+  el.className = type;
+}
+function dataUrlToBlob(dataUrl){
+  const arr = String(dataUrl).split(",");
+  const mime = (arr[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
+  const bin = atob(arr[1] || "");
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type:mime });
+}
+function canvasToBlob(canvas, type, quality){
+  return new Promise(resolve => canvas.toBlob(resolve, type, quality));
+}
+function loadImageFromFile(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Không đọc được ảnh"));
+    img.src = URL.createObjectURL(file);
   });
 }
-function loadImageElement(src){
-  return new Promise((resolve,reject)=>{
-    const img=new Image();
-    img.onload=()=>resolve(img);
-    img.onerror=()=>reject(new Error("Ảnh không hợp lệ"));
-    img.src=src;
-  });
-}
-async function prepareMenuImageDataUrl(file){
-  if(!file) return "";
-  if(!/^image\//.test(file.type||"")) throw new Error("Vui lòng chọn đúng file ảnh");
-  const original=await readFileAsDataUrl(file);
-  const img=await loadImageElement(original);
-  const maxSide=1400;
-  const scale=Math.min(1, maxSide/Math.max(img.naturalWidth||img.width, img.naturalHeight||img.height));
-  const w=Math.max(1, Math.round((img.naturalWidth||img.width)*scale));
-  const h=Math.max(1, Math.round((img.naturalHeight||img.height)*scale));
-  const canvas=document.createElement("canvas");
-  canvas.width=w; canvas.height=h;
-  const ctx=canvas.getContext("2d");
-  ctx.drawImage(img,0,0,w,h);
-  return canvas.toDataURL("image/jpeg",0.82);
-}
-async function uploadMenuImageIfNeeded(){
-  const input=$("#menuImageFile");
-  const note=$("#menuImageUploadNote");
-  const file=input?.files?.[0];
-  if(!file) return "";
-  if(note) note.textContent="Đang nén và tải ảnh lên database...";
-  const imageData=await prepareMenuImageDataUrl(file);
-  const data=await api("/api/upload-image",{method:"POST",body:JSON.stringify({filename:file.name,mimeType:"image/jpeg",imageData})});
-  if(note) note.textContent="Ảnh đã được lưu vào database.";
-  if(input) input.value="";
-  return data.imageUrl || "";
+async function resizeMenuImageFile(file){
+  if(!file || !file.type || !file.type.startsWith("image/")) throw new Error("Vui lòng chọn đúng file ảnh");
+  const img = await loadImageFromFile(file);
+  const scale = Math.min(1, MENU_IMAGE_MAX_SIDE / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+  let width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+  let height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { alpha:false });
+
+  for(let side = MENU_IMAGE_MAX_SIDE; side >= 720; side -= 160){
+    const s = Math.min(1, side / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+    width = Math.max(1, Math.round((img.naturalWidth || img.width) * s));
+    height = Math.max(1, Math.round((img.naturalHeight || img.height) * s));
+    canvas.width = width; canvas.height = height;
+    ctx.fillStyle = "#111";
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    for(let quality = 0.88; quality >= 0.42; quality -= 0.06){
+      let blob = await canvasToBlob(canvas, "image/webp", quality);
+      if(!blob) blob = await canvasToBlob(canvas, "image/jpeg", quality);
+      if(blob && blob.size <= MENU_IMAGE_MAX_BYTES){
+        return await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = () => resolve({ dataUrl: reader.result, size: blob.size, width, height });
+          reader.readAsDataURL(blob);
+        });
+      }
+    }
+  }
+  throw new Error("Ảnh vẫn lớn hơn 900KB sau khi nén. Hãy chọn/cắt ảnh nhỏ hơn.");
 }
 
 function updateCropPreview(){
@@ -620,7 +636,7 @@ function openMenuForm(item=null){
   $("#menuIdInput").value=item?.id||"";
   f.name.value=item?.name||""; f.originalPrice.value=item?.originalPrice??""; f.price.value=item?.price??"";
   f.category.value=item?.category||"main"; f.popular.value=item?.popular??50; f.icon.value=item?.icon||"";
-  f.imageUrl.value=item?.imageUrl||""; f.imageFit.value=item?.imageFit||"custom-crop"; if($("#menuImageFile")) $("#menuImageFile").value=""; if($("#menuImageUploadNote")) $("#menuImageUploadNote").textContent="Chọn ảnh trực tiếp từ điện thoại. Hệ thống sẽ nén ảnh và lưu vào database.";
+  f.imageUrl.value=item?.imageUrl||""; menuImageRemoved=false; const fileInput=$("#menuImageFile"); if(fileInput) fileInput.value=""; setMenuImageStatus(item?.imageUrl ? "Đang dùng ảnh đã lưu. Chọn ảnh mới nếu muốn thay." : "Chưa có ảnh món."); f.imageFit.value=item?.imageFit||"custom-crop";
   f.imageZoom.value=item?.imageZoom??100; f.imagePosX.value=item?.imagePosX??50; f.imagePosY.value=item?.imagePosY??50;
   $("#cropZoom").value=f.imageZoom.value; $("#cropX").value=f.imagePosX.value; $("#cropY").value=f.imagePosY.value;
   f.desc.value=item?.desc||""; f.tags.value=Array.isArray(item?.tags)?item.tags.join(", "):""; f.available.value=item?.available===false?"false":"true";
@@ -820,9 +836,8 @@ $("#tableDateFilter")?.addEventListener("change",loadDashboard); $("#tableTimeFi
 
 $("#addMenuBtn").addEventListener("click",()=>openMenuForm());
 $("#menuCancelBtn").addEventListener("click",()=>$("#menuModal").classList.remove("show"));
-$("#menuForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); data.originalPrice=Number(data.originalPrice||0); data.price=Number(data.price||0); data.popular=Number(data.popular||0); data.imageZoom=Number(data.imageZoom||100); data.imagePosX=Number(data.imagePosX??50); data.imagePosY=Number(data.imagePosY??50); data.available=data.available==="true"; try{ const uploadedImageUrl=await uploadMenuImageIfNeeded(); if(uploadedImageUrl) data.imageUrl=uploadedImageUrl; await api("/api/menu",{method:"POST",body:JSON.stringify(data)}); $("#menuModal").classList.remove("show"); toast("Đã lưu món"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
-$("#menuImageFile")?.addEventListener("change",async e=>{ const file=e.target.files?.[0]; if(!file) return; try{ const localUrl=URL.createObjectURL(file); $("#menuForm").imageUrl.value=localUrl; updateCropPreview(); if($("#menuImageUploadNote")) $("#menuImageUploadNote").textContent="Đã chọn ảnh. Bấm Lưu món để lưu ảnh vào database."; }catch(err){ toast(err.message,"error"); } });
-$("#menuForm").imageFit.addEventListener("change", updateCropPreview); $("#cropZoom").addEventListener("input", updateCropPreview); $("#cropX").addEventListener("input", updateCropPreview); $("#cropY").addEventListener("input", updateCropPreview); $("#cropResetBtn").addEventListener("click", resetCropPreview);
+$("#menuForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); delete data.imageFile; data.originalPrice=Number(data.originalPrice||0); data.price=Number(data.price||0); data.popular=Number(data.popular||0); data.imageZoom=Number(data.imageZoom||100); data.imagePosX=Number(data.imagePosX??50); data.imagePosY=Number(data.imagePosY??50); data.available=data.available==="true"; if(menuImageRemoved) data.imageUrl=""; try{ await api("/api/menu",{method:"POST",body:JSON.stringify(data)}); $("#menuModal").classList.remove("show"); toast("Đã lưu món"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
+$("#menuImageFile")?.addEventListener("change", async e=>{ const file=e.target.files && e.target.files[0]; if(!file) return; try{ setMenuImageStatus("Đang resize và nén ảnh..."); const out=await resizeMenuImageFile(file); $("#menuForm").imageUrl.value=out.dataUrl; menuImageRemoved=false; setMenuImageStatus(`Đã nén: ${Math.round(out.size/1024)}KB • ${out.width}×${out.height}`, "ok"); updateCropPreview(); }catch(err){ e.target.value=""; setMenuImageStatus(err.message, "error"); toast(err.message,"error"); } }); $("#removeMenuImageBtn")?.addEventListener("click", ()=>{ const f=$("#menuForm"); f.imageUrl.value=""; const fileInput=$("#menuImageFile"); if(fileInput) fileInput.value=""; menuImageRemoved=true; setMenuImageStatus("Đã xoá ảnh. Khi lưu, món sẽ dùng icon."); updateCropPreview(); }); $("#menuForm").imageFit.addEventListener("change", updateCropPreview); $("#cropZoom").addEventListener("input", updateCropPreview); $("#cropX").addEventListener("input", updateCropPreview); $("#cropY").addEventListener("input", updateCropPreview); $("#cropResetBtn").addEventListener("click", resetCropPreview);
 
 $("#addInventoryBtn").addEventListener("click",()=>openInventoryForm());
 $("#inventoryCancelBtn").addEventListener("click",()=>$("#inventoryModal").classList.remove("show"));

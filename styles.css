@@ -2407,3 +2407,34 @@ textarea{min-height:92px;resize:vertical}
     height:48px !important;
   }
 }
+
+/* ===== v34: direct menu image upload from phone ===== */
+.image-upload-field input[type="file"]{
+  width:100%;
+  padding:14px;
+  border:1px dashed rgba(255,215,128,.35);
+  border-radius:18px;
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+}
+.image-upload-field small,
+.image-upload-actions small{
+  display:block;
+  margin-top:8px;
+  color:var(--muted);
+  line-height:1.45;
+}
+.image-upload-actions{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:-4px;
+  margin-bottom:8px;
+}
+.image-upload-actions .btn{
+  min-height:42px;
+  padding:10px 14px;
+}
+#menuImageStatus.ok{color:#7dffb2;}
+#menuImageStatus.error{color:#ff8a8a;}

@@ -9,17 +9,6 @@ CREATE TABLE IF NOT EXISTS menu (
   created_at TIMESTAMPTZ DEFAULT now(), updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-
-
-CREATE TABLE IF NOT EXISTS menu_images (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  filename TEXT DEFAULT '',
-  mime_type TEXT NOT NULL,
-  data BYTEA NOT NULL,
-  size_bytes INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
 CREATE TABLE IF NOT EXISTS settings (
   id TEXT PRIMARY KEY DEFAULT 'main', shop_name TEXT DEFAULT 'CG Quán Ăn',
   phone TEXT DEFAULT '', address TEXT DEFAULT '', shipping_fee INTEGER DEFAULT 0,
