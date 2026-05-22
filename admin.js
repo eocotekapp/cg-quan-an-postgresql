@@ -557,8 +557,8 @@ function renderAnalytics(data){
 }
 
 
-const MENU_IMAGE_MAX_BYTES = 900 * 1024;
-const MENU_IMAGE_MAX_SIDE = 1280;
+const MENU_IMAGE_MAX_BYTES = 620 * 1024; // Nhỏ hơn 900KB để khi đổi sang base64 gửi qua API vẫn không vượt giới hạn request.
+const MENU_IMAGE_MAX_SIDE = 1080;
 let menuImageRemoved = false;
 function setMenuImageStatus(text, type = ""){
   const el = $("#menuImageStatus");
@@ -594,7 +594,7 @@ async function resizeMenuImageFile(file){
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d", { alpha:false });
 
-  for(let side = MENU_IMAGE_MAX_SIDE; side >= 720; side -= 160){
+  for(let side = MENU_IMAGE_MAX_SIDE; side >= 560; side -= 130){
     const s = Math.min(1, side / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
     width = Math.max(1, Math.round((img.naturalWidth || img.width) * s));
     height = Math.max(1, Math.round((img.naturalHeight || img.height) * s));
@@ -602,7 +602,7 @@ async function resizeMenuImageFile(file){
     ctx.fillStyle = "#111";
     ctx.fillRect(0, 0, width, height);
     ctx.drawImage(img, 0, 0, width, height);
-    for(let quality = 0.88; quality >= 0.42; quality -= 0.06){
+    for(let quality = 0.86; quality >= 0.34; quality -= 0.06){
       let blob = await canvasToBlob(canvas, "image/webp", quality);
       if(!blob) blob = await canvasToBlob(canvas, "image/jpeg", quality);
       if(blob && blob.size <= MENU_IMAGE_MAX_BYTES){
@@ -614,7 +614,7 @@ async function resizeMenuImageFile(file){
       }
     }
   }
-  throw new Error("Ảnh vẫn lớn hơn 900KB sau khi nén. Hãy chọn/cắt ảnh nhỏ hơn.");
+  throw new Error("Ảnh vẫn lớn sau khi nén. Hãy chọn/cắt ảnh nhỏ hơn rồi thử lại.");
 }
 
 function updateCropPreview(){
@@ -836,8 +836,32 @@ $("#tableDateFilter")?.addEventListener("change",loadDashboard); $("#tableTimeFi
 
 $("#addMenuBtn").addEventListener("click",()=>openMenuForm());
 $("#menuCancelBtn").addEventListener("click",()=>$("#menuModal").classList.remove("show"));
-$("#menuForm").addEventListener("submit",async e=>{ e.preventDefault(); const data=Object.fromEntries(new FormData(e.target).entries()); delete data.imageFile; data.originalPrice=Number(data.originalPrice||0); data.price=Number(data.price||0); data.popular=Number(data.popular||0); data.imageZoom=Number(data.imageZoom||100); data.imagePosX=Number(data.imagePosX??50); data.imagePosY=Number(data.imagePosY??50); data.available=data.available==="true"; if(menuImageRemoved) data.imageUrl=""; try{ await api("/api/menu",{method:"POST",body:JSON.stringify(data)}); $("#menuModal").classList.remove("show"); toast("Đã lưu món"); loadDashboard(); bindActions();}catch(err){ toast(err.message,"error"); } });
-$("#menuImageFile")?.addEventListener("change", async e=>{ const file=e.target.files && e.target.files[0]; if(!file) return; try{ setMenuImageStatus("Đang resize và nén ảnh..."); const out=await resizeMenuImageFile(file); $("#menuForm").imageUrl.value=out.dataUrl; menuImageRemoved=false; setMenuImageStatus(`Đã nén: ${Math.round(out.size/1024)}KB • ${out.width}×${out.height}`, "ok"); updateCropPreview(); }catch(err){ e.target.value=""; setMenuImageStatus(err.message, "error"); toast(err.message,"error"); } }); $("#removeMenuImageBtn")?.addEventListener("click", ()=>{ const f=$("#menuForm"); f.imageUrl.value=""; const fileInput=$("#menuImageFile"); if(fileInput) fileInput.value=""; menuImageRemoved=true; setMenuImageStatus("Đã xoá ảnh. Khi lưu, món sẽ dùng icon."); updateCropPreview(); }); $("#menuForm").imageFit.addEventListener("change", updateCropPreview); $("#cropZoom").addEventListener("input", updateCropPreview); $("#cropX").addEventListener("input", updateCropPreview); $("#cropY").addEventListener("input", updateCropPreview); $("#cropResetBtn").addEventListener("click", resetCropPreview);
+$("#menuForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const data=Object.fromEntries(new FormData(e.target).entries());
+  delete data.imageFile;
+  data.originalPrice=Number(data.originalPrice||0);
+  data.price=Number(data.price||0);
+  data.popular=Number(data.popular||0);
+  data.imageZoom=Number(data.imageZoom||100);
+  data.imagePosX=Number(data.imagePosX??50);
+  data.imagePosY=Number(data.imagePosY??50);
+  data.available=data.available==="true";
+  if(menuImageRemoved) data.imageUrl="";
+  if(data.imageUrl && String(data.imageUrl).startsWith("data:image/") && String(data.imageUrl).length > 900 * 1024){
+    toast("Ảnh đã nén vẫn quá lớn để lưu. Hãy chọn ảnh khác.", "error");
+    setMenuImageStatus("Ảnh đã nén vẫn quá lớn để lưu. Hãy chọn ảnh khác.", "error");
+    return;
+  }
+  try{
+    const result = await api("/api/menu",{method:"POST",body:JSON.stringify(data)});
+    $("#menuModal").classList.remove("show");
+    toast(result?.hasImage ? "Đã lưu món + ảnh" : "Đã lưu món");
+    await loadDashboard();
+    bindActions();
+  }catch(err){ toast(err.message,"error"); }
+});
+$("#menuImageFile")?.addEventListener("change", async e=>{ const file=e.target.files && e.target.files[0]; if(!file) return; try{ setMenuImageStatus("Đang resize và nén ảnh..."); const out=await resizeMenuImageFile(file); $("#menuForm").imageUrl.value=out.dataUrl; menuImageRemoved=false; setMenuImageStatus(`Đã nén: ${Math.round(out.size/1024)}KB • ${out.width}×${out.height} • sẵn sàng lưu`, "ok"); updateCropPreview(); }catch(err){ e.target.value=""; setMenuImageStatus(err.message, "error"); toast(err.message,"error"); } }); $("#removeMenuImageBtn")?.addEventListener("click", ()=>{ const f=$("#menuForm"); f.imageUrl.value=""; const fileInput=$("#menuImageFile"); if(fileInput) fileInput.value=""; menuImageRemoved=true; setMenuImageStatus("Đã xoá ảnh. Khi lưu, món sẽ dùng icon."); updateCropPreview(); }); $("#menuForm").imageFit.addEventListener("change", updateCropPreview); $("#cropZoom").addEventListener("input", updateCropPreview); $("#cropX").addEventListener("input", updateCropPreview); $("#cropY").addEventListener("input", updateCropPreview); $("#cropResetBtn").addEventListener("click", resetCropPreview);
 
 $("#addInventoryBtn").addEventListener("click",()=>openInventoryForm());
 $("#inventoryCancelBtn").addEventListener("click",()=>$("#inventoryModal").classList.remove("show"));
