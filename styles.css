@@ -2461,7 +2461,7 @@ textarea{min-height:92px;resize:vertical}
   height: 100% !important;
   aspect-ratio: 16 / 9 !important;
   object-fit: cover !important;
-  object-position: center center !important;
+  object-position: var(--img-x, 50%) var(--img-y, 50%) !important;
   display: block !important;
 }
 
@@ -2478,7 +2478,7 @@ textarea{min-height:92px;resize:vertical}
 .menu-admin-card img {
   aspect-ratio: 16 / 9 !important;
   object-fit: cover !important;
-  object-position: center center !important;
+  object-position: var(--img-x, 50%) var(--img-y, 50%) !important;
 }
 
 /* If the admin list uses horizontal rows, keep a stable thumbnail box */
