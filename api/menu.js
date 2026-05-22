@@ -21,7 +21,7 @@ function parseDataImage(v){
   if(!str.startsWith("data:image/")) return null;
   // File ảnh đã được resize/nén ở client. Giới hạn này là độ dài chuỗi base64 gửi qua API,
   // không phải kích thước file gốc. Để an toàn với Vercel/serverless, client đang nén thấp hơn 900KB.
-  if(str.length > 780 * 1024) throw new Error("Ảnh quá lớn để lưu. Vui lòng chọn ảnh khác hoặc ảnh nhỏ hơn");
+  if(str.length > 2.2 * 1024 * 1024) throw new Error("Ảnh quá lớn để lưu. Vui lòng chọn ảnh khác hoặc ảnh nhỏ hơn");
   const m = str.match(/^data:(image\/(webp|jpeg|jpg|png));base64,([A-Za-z0-9+/=]+)$/i);
   if(!m) throw new Error("Định dạng ảnh không hỗ trợ");
   return { mime: m[1].toLowerCase().replace("image/jpg","image/jpeg"), data: m[3] };
@@ -29,6 +29,17 @@ function parseDataImage(v){
 
 function imageUrlFor(id){
   return `/api/menu?image=${encodeURIComponent(id)}&v=${Date.now()}`;
+}
+
+async function saveMenuImage(id, dataImage){
+  await ensureMenuImagesTable();
+  await query(`INSERT INTO menu_images(menu_id,mime,data,updated_at) VALUES($1,$2,$3,now())
+    ON CONFLICT(menu_id) DO UPDATE SET mime=EXCLUDED.mime,data=EXCLUDED.data,updated_at=now()`,
+    [id, dataImage.mime, dataImage.data]);
+  const check = await query("SELECT length(data) AS len FROM menu_images WHERE menu_id=$1", [id]);
+  const img = rows(check)[0];
+  if(!img || Number(img.len || 0) < 10) throw new Error("Ảnh chưa lưu được vào database");
+  return true;
 }
 
 function cleanLegacyImageValue(v){
@@ -87,17 +98,17 @@ module.exports = async function handler(req,res){
       ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,category=EXCLUDED.category,price=EXCLUDED.price,original_price=EXCLUDED.original_price,profit=EXCLUDED.profit,popular=EXCLUDED.popular,icon=EXCLUDED.icon,description=EXCLUDED.description,image_url=EXCLUDED.image_url,available=EXCLUDED.available,image_fit=EXCLUDED.image_fit,image_zoom=EXCLUDED.image_zoom,image_pos_x=EXCLUDED.image_pos_x,image_pos_y=EXCLUDED.image_pos_y,updated_at=now()`,
       [id,cleanString(b.name,120),cleanString(b.category||"main",40),price,originalPrice,profit,Number(b.popular||0),cleanString(b.icon||"🍽️",20),cleanString(b.desc||b.description||"",500),finalImageUrl,b.available!==false&&b.available!=="false",cleanString(b.imageFit||"cover",20),Number(b.imageZoom||100),Number(b.imagePosX??50),Number(b.imagePosY??50)]);
 
+      let imageSaved = false;
       if(dataImage){
-        await ensureMenuImagesTable();
-        await query(`INSERT INTO menu_images(menu_id,mime,data,updated_at) VALUES($1,$2,$3,now())
-          ON CONFLICT(menu_id) DO UPDATE SET mime=EXCLUDED.mime,data=EXCLUDED.data,updated_at=now()`,
-          [id, dataImage.mime, dataImage.data]);
+        imageSaved = await saveMenuImage(id, dataImage);
+        finalImageUrl = imageUrlFor(id);
+        await query("UPDATE menu SET image_url=$1, updated_at=now() WHERE id=$2", [finalImageUrl, id]);
       }else if(!incomingImage){
         await ensureMenuImagesTable();
         await query("DELETE FROM menu_images WHERE menu_id=$1", [id]);
       }
 
-      return send(res,200,{ok:true,id,hasImage:Boolean(finalImageUrl),imageUrl:finalImageUrl,imageMode:dataImage?"database":"url"});
+      return send(res,200,{ok:true,id,hasImage:Boolean(finalImageUrl),imageSaved,imageUrl:finalImageUrl,imageMode:dataImage?"database":"url"});
     }
 
     if(req.method==="DELETE"){
