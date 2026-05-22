@@ -65,17 +65,36 @@ async function uploadMenuImageIfNeeded(form) {
     throw new Error(data.error || text || `Upload ảnh lỗi HTTP ${res.status}`);
   }
 
-  return data.url || data.relativeUrl || "";
+  const uploaded = data.url || data.relativeUrl || "";
+  return normalizeImageUrl(uploaded);
 }
 
 function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+
+function normalizeImageUrl(url) {
+  let u = String(url || "").trim();
+  if (!u) return "";
+
+  // Dữ liệu lỗi cũ có dạng ${proto}://${host}/uploads/${filename}; không render nữa.
+  if (u.includes("${") || u.includes("%7B") || u.includes("%7D")) return "";
+
+  const apiBase = String(window.CG_API_BASE_URL || localStorage.getItem("CG_API_BASE_URL") || "").replace(/\/$/, "");
+
+  if (/^https?:\/\//i.test(u) || u.startsWith("data:") || u.startsWith("blob:")) return u;
+  if (u.startsWith("/uploads/")) return apiBase ? apiBase + u : u;
+  if (u.startsWith("uploads/")) return apiBase ? apiBase + "/" + u : "/" + u;
+
+  return u;
+}
+
 function menuImageHtml(item, className = "admin-menu-thumb"){
   const fitClass = escapeHtml(item?.imageFit || "custom-crop");
   const zoom = Number(item?.imageZoom || 100) / 100;
   const x = Number(item?.imagePosX ?? 50);
   const y = Number(item?.imagePosY ?? 50);
-  if (item?.imageUrl) {
-    return `<img class="${escapeHtml(className)} ${fitClass}" style="--img-zoom:${zoom};--img-x:${x}%;--img-y:${y}%" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name || "Món ăn")}" loading="lazy">`;
+  const imgUrl = normalizeImageUrl(item?.imageUrl);
+  if (imgUrl) {
+    return `<img class="${escapeHtml(className)} ${fitClass}" style="--img-zoom:${zoom};--img-x:${x}%;--img-y:${y}%" src="${escapeHtml(imgUrl)}" alt="${escapeHtml(item.name || "Món ăn")}" loading="lazy">`;
   }
   return `<span class="${escapeHtml(className)} no-image-thumb">${escapeHtml(item?.icon || "🍽️")}</span>`;
 }
@@ -605,7 +624,7 @@ function updateCropPreview(){
     img.dataset.objectUrl=URL.createObjectURL(file);
     img.src=img.dataset.objectUrl;
   }else{
-    img.src=f.imageUrl.value.trim()||"";
+    img.src=normalizeImageUrl(f.imageUrl.value.trim())||"";
   }
   img.className=f.imageFit.value||"custom-crop";
   img.style.setProperty("--img-zoom", zoom/100);

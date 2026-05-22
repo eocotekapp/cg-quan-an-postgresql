@@ -50,3 +50,14 @@ Lệnh env gợi ý Termux:
 export UPLOAD_DIR=/storage/emulated/0/android-server/uploads
 export PUBLIC_UPLOAD_BASE=https://LINK-CLOUDFLARE-CUA-BAN
 ```
+
+
+## Bản fixed-v3-clean
+
+Đã sửa thêm:
+- Frontend tự đổi `/uploads/ten-file.jpg` thành `window.CG_API_BASE_URL + /uploads/...`.
+- Frontend bỏ qua dữ liệu ảnh lỗi cũ chứa `${proto}`, `${host}`, `${filename}` hoặc `%7B...%7D`.
+- `admin.js` lưu URL ảnh đã normalize sau khi upload.
+- Thêm `server.android.js` mẫu để copy thành `server.js` trên Android nếu cần.
+
+Lưu ý: các món đã lưu URL ảnh lỗi cũ cần sửa/upload lại ảnh.

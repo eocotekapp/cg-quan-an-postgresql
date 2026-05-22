@@ -1,3 +1,19 @@
+
+function normalizeImageUrl(url) {
+  let u = String(url || "").trim();
+  if (!u) return "";
+
+  // Dữ liệu lỗi cũ có dạng ${proto}://${host}/uploads/${filename}; không render nữa.
+  if (u.includes("${") || u.includes("%7B") || u.includes("%7D")) return "";
+
+  const apiBase = String(window.CG_API_BASE_URL || localStorage.getItem("CG_API_BASE_URL") || "").replace(/\/$/, "");
+
+  if (/^https?:\/\//i.test(u) || u.startsWith("data:") || u.startsWith("blob:")) return u;
+  if (u.startsWith("/uploads/")) return apiBase ? apiBase + u : u;
+  if (u.startsWith("uploads/")) return apiBase ? apiBase + "/" + u : "/" + u;
+
+  return u;
+}
 function cgApiUrl(path){
   const base = (window.CG_API_BASE_URL || localStorage.getItem("CG_API_BASE_URL") || "").replace(/\/$/, "");
   const p = String(path || "");
@@ -88,10 +104,11 @@ function renderMenu() {
 
   $("#menuGrid").innerHTML = list.map(item => {
     const fitClass = escapeHtml(item.imageFit || "custom-crop");
-    const art = item.imageUrl
-      ? `<img class="${fitClass} menu-img-crop" style="--img-zoom:${Number(item.imageZoom || 100) / 100};--img-x:${Number(item.imagePosX ?? 50)}%;--img-y:${Number(item.imagePosY ?? 50)}%" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">`
+    const imgUrl = normalizeImageUrl(item.imageUrl);
+    const art = imgUrl
+      ? `<img class="${fitClass} menu-img-crop" style="--img-zoom:${Number(item.imageZoom || 100) / 100};--img-x:${Number(item.imagePosX ?? 50)}%;--img-y:${Number(item.imagePosY ?? 50)}%" src="${escapeHtml(imgUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">`
       : `<span>${escapeHtml(item.icon || "🍽️")}</span>`;
-    return `<article class="food-card ${item.imageUrl ? "has-image" : "no-image"}">
+    return `<article class="food-card ${imgUrl ? "has-image" : "no-image"}">
       <div class="food-art">${art}</div>
       <div class="food-body">
         <h3>${escapeHtml(item.name)}</h3>
