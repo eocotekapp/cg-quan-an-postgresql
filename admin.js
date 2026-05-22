@@ -87,6 +87,33 @@ function normalizeImageUrl(url) {
   return u;
 }
 
+
+function isManagedUploadUrl(url){
+  return typeof url === "string" && url.includes("/uploads/") && !url.includes("${") && !url.includes("%7B");
+}
+
+async function deleteUploadedImageOnAndroid(imageUrl){
+  const normalized = normalizeImageUrl(imageUrl);
+  if(!isManagedUploadUrl(normalized)) return false;
+  try{
+    const res = await fetch(cgUploadUrl("/api/delete-upload"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-pin": pin },
+      body: JSON.stringify({ imageUrl: normalized })
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || data.ok === false){
+      console.warn("Không xoá được ảnh cũ trên Android:", data.error || res.status);
+      return false;
+    }
+    console.log("Kết quả xoá ảnh cũ:", data);
+    return !!data.deleted;
+  }catch(e){
+    console.warn("Lỗi gọi Android delete-upload:", e.message);
+    return false;
+  }
+}
+
 function menuImageHtml(item, className = "admin-menu-thumb"){
   const fitClass = escapeHtml(item?.imageFit || "custom-crop");
   const zoom = Number(item?.imageZoom || 100) / 100;
@@ -634,6 +661,7 @@ function updateCropPreview(){
 function resetCropPreview(){ $("#cropZoom").value=100; $("#cropX").value=50; $("#cropY").value=50; $("#menuForm").imageFit.value="custom-crop"; updateCropPreview(); }
 function openMenuForm(item=null){
   const f=$("#menuForm"); f.reset();
+  f.dataset.oldImageUrl = normalizeImageUrl(item?.imageUrl || "");
   $("#menuModalTitle").textContent=item?"Sửa món":"Thêm món";
   $("#menuIdInput").value=item?.id||"";
   f.name.value=item?.name||""; f.originalPrice.value=item?.originalPrice??""; f.price.value=item?.price??"";
@@ -676,7 +704,16 @@ function bindDeleteActions(){
 }
 function bindMenuActions(items){
   $$("[data-menu-edit]").forEach(btn=>btn.onclick=()=>openMenuForm(items.find(x=>String(x.id)===String(btn.dataset.menuEdit))));
-  $$("[data-menu-delete]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api(`/api/menu?id=${encodeURIComponent(btn.dataset.menuDelete)}`,{method:"DELETE"}); toast("Đã xoá món"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Xoá món"; $("#confirmMessage").textContent="Bạn chắc chắn muốn xoá món?"; $("#confirmModal").classList.add("show"); });
+  $$("[data-menu-delete]").forEach(btn=>btn.onclick=()=>{
+    const item = items.find(x=>String(x.id)===String(btn.dataset.menuDelete));
+    confirmJob=async()=>{
+      await api(`/api/menu?id=${encodeURIComponent(btn.dataset.menuDelete)}`,{method:"DELETE"});
+      await deleteUploadedImageOnAndroid(item?.imageUrl || "");
+      toast("Đã xoá món");
+      loadDashboard(); bindActions();
+    };
+    $("#confirmTitle").textContent="Xoá món"; $("#confirmMessage").textContent="Bạn chắc chắn muốn xoá món?"; $("#confirmModal").classList.add("show");
+  });
 }
 function bindInventoryActions(items){
   $$("[data-inv-edit]").forEach(btn=>btn.onclick=()=>openInventoryForm(items.find(x=>String(x.id)===String(btn.dataset.invEdit))));
@@ -852,9 +889,13 @@ $("#menuForm").addEventListener("submit",async e=>{
   data.imagePosY=Number(data.imagePosY??50);
   data.available=data.available==="true";
   try{
+    const oldImageUrlBeforeSave = normalizeImageUrl(form.dataset.oldImageUrl || "");
     const uploadedUrl=await uploadMenuImageIfNeeded(form);
-    data.imageUrl=uploadedUrl||"";
+    data.imageUrl=normalizeImageUrl(uploadedUrl||"");
     await api("/api/menu",{method:"POST",body:JSON.stringify(data)});
+    if(oldImageUrlBeforeSave && oldImageUrlBeforeSave !== data.imageUrl){
+      await deleteUploadedImageOnAndroid(oldImageUrlBeforeSave);
+    }
     $("#menuModal").classList.remove("show");
     toast("Đã lưu món");
     loadDashboard();

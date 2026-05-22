@@ -44,7 +44,8 @@ const routes = {
   "/api/sessions": require("./api/sessions"),
   "/api/inventory": require("./api/inventory"),
   "/api/archive": require("./api/archive"),
-  "/api/upload": require("./api/upload")
+  "/api/upload": require("./api/upload"),
+  "/api/delete-upload": require("./android-delete-upload")
 };
 
 for (const [route, handler] of Object.entries(routes)) {
