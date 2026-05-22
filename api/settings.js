@@ -1,4 +1,4 @@
-const { query, row } = require("./_db");
-const { send, requireAdmin } = require("./_utils");
+const { query, row } = require("../lib/_db");
+const { send, requireAdmin } = require("../lib/_utils");
 const map=r=>({shopName:r?.shop_name||"CG Quán Ăn",phone:r?.phone||"",address:r?.address||"",shippingFee:Number(r?.shipping_fee||0),freeShipFrom:Number(r?.free_ship_from||0)});
 module.exports=async function handler(req,res){try{if(req.method==="GET"){const r=await query("SELECT * FROM settings WHERE id='main'");return send(res,200,{ok:true,settings:map(row(r))});}if(req.method==="POST"){if(!requireAdmin(req,res))return;const b=req.body||{};await query(`INSERT INTO settings(id,shop_name,phone,address,shipping_fee,free_ship_from,updated_at) VALUES('main',$1,$2,$3,$4,$5,now()) ON CONFLICT(id) DO UPDATE SET shop_name=EXCLUDED.shop_name,phone=EXCLUDED.phone,address=EXCLUDED.address,shipping_fee=EXCLUDED.shipping_fee,free_ship_from=EXCLUDED.free_ship_from,updated_at=now()`,[b.shopName||"",b.phone||"",b.address||"",Number(b.shippingFee||0),Number(b.freeShipFrom||0)]);const r=await query("SELECT * FROM settings WHERE id='main'");return send(res,200,{ok:true,settings:map(row(r))});}send(res,405,{ok:false,error:"Method not allowed"});}catch(e){console.error(e);send(res,500,{ok:false,error:e.message});}};

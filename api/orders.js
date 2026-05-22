@@ -1,6 +1,6 @@
-const { query, rows, row } = require("./_db");
-const { send, requireAdmin, money, makeCode } = require("./_utils");
-const { sendTelegram, escapeHtml } = require("./_telegram");
+const { query, rows, row } = require("../lib/_db");
+const { send, requireAdmin, money, makeCode } = require("../lib/_utils");
+const { sendTelegram, escapeHtml } = require("../lib/_telegram");
 
 function mapOrder(r){return{ id:r.id,orderCode:r.order_code,type:r.type,customer:r.customer||{},items:r.items||[],subtotal:Number(r.subtotal||0),discount:Number(r.discount||0),shippingFee:Number(r.shipping_fee||0),total:Number(r.total||0),status:r.status,createdAt:r.created_at,updatedAt:r.updated_at};}
 function cleanItems(items){return(Array.isArray(items)?items:[]).map(x=>({id:String(x.id||""),name:String(x.name||"Món"),price:Number(x.price||0),qty:Math.max(1,Number(x.qty||1))})).filter(x=>x.name);}

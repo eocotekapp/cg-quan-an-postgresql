@@ -1,6 +1,6 @@
-const { query, rows, row } = require("./_db");
-const { send, requireAdmin, money, makeCode } = require("./_utils");
-const { sendTelegram, escapeHtml } = require("./_telegram");
+const { query, rows, row } = require("../lib/_db");
+const { send, requireAdmin, money, makeCode } = require("../lib/_utils");
+const { sendTelegram, escapeHtml } = require("../lib/_telegram");
 function cleanItems(items){return(Array.isArray(items)?items:[]).map(x=>({id:String(x.id||""),name:String(x.name||"Món"),price:Number(x.price||0),qty:Math.max(1,Number(x.qty||1))})).filter(x=>x.name);}
 function calc(calls=[]){const map=new Map();let preorderTotal=0,extraTotal=0;for(const call of calls||[])for(const it of call.items||[]){const key=it.id||it.name,old=map.get(key)||{id:it.id||"",name:it.name,price:Number(it.price||0),qty:0};old.qty+=Number(it.qty||1);map.set(key,old);const a=Number(it.price||0)*Number(it.qty||1);if(call.source==="preorder")preorderTotal+=a;else extraTotal+=a;}return{items:[...map.values()],preorderTotal,extraTotal,total:preorderTotal+extraTotal};}
 function map(r){const t=calc(r.calls||[]);return{id:r.id,sessionCode:r.session_code,bookingId:r.booking_id,customerName:r.customer_name,phone:r.phone,guests:Number(r.guests||1),tables:r.tables||[],mainTable:r.main_table,table:r.table_id,status:r.status,source:r.source,calls:r.calls||[],note:r.note,arrivalClock:r.arrival_clock,lockStartText:r.lock_start_text,lockEndText:r.lock_end_text,openedAtText:r.opened_at_text,closedAtText:r.closed_at_text,summaryItems:t.items,total:t.total,preorderTotal:t.preorderTotal,extraTotal:t.extraTotal};}

@@ -1,7 +1,7 @@
-const { query, rows } = require("./_db");
-const { send, requireAdmin, makeCode, money } = require("./_utils");
-const { buildLockWindow, overlaps } = require("./_bookingTime");
-const { sendTelegram, escapeHtml } = require("./_telegram");
+const { query, rows } = require("../lib/_db");
+const { send, requireAdmin, makeCode, money } = require("../lib/_utils");
+const { buildLockWindow, overlaps } = require("../lib/_bookingTime");
+const { sendTelegram, escapeHtml } = require("../lib/_telegram");
 
 function cleanItems(items){
   return (Array.isArray(items)?items:[])
