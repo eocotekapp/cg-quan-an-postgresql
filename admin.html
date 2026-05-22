@@ -161,7 +161,9 @@
     <div class="form-row"><label class="field"><span>Giá gốc</span><input name="originalPrice" type="number" min="0" inputmode="numeric" pattern="[0-9]*"></label><label class="field"><span>Giá bán</span><input name="price" type="number" min="0" required inputmode="numeric" pattern="[0-9]*"></label></div>
     <div class="form-row"><label class="field"><span>Danh mục</span><select name="category"><option value="main">Món chính</option><option value="drink">Đồ uống</option><option value="snack">Ăn vặt</option><option value="dessert">Tráng miệng</option></select></label><label class="field"><span>Độ ưu tiên</span><input name="popular" type="number" min="0" value="50" inputmode="numeric" pattern="[0-9]*"></label></div>
     <label class="field"><span>Icon nếu không có ảnh</span><input name="icon" placeholder="🍗"></label>
-    <label class="field"><span>Link ảnh món</span><input name="imageUrl" placeholder="https://..."></label>
+    <label class="field"><span>Ảnh món từ điện thoại</span><input id="menuImageFile" type="file" accept="image/*"></label>
+    <input type="hidden" name="imageUrl">
+    <div class="image-upload-note muted" id="menuImageUploadNote">Chọn ảnh trực tiếp từ điện thoại. Hệ thống sẽ nén ảnh và lưu vào database.</div>
     <label class="field"><span>Cách hiển thị ảnh</span><select name="imageFit"><option value="custom-crop">Tự căn ảnh</option><option value="cover-center">Cắt giữa</option><option value="cover-top">Cắt trên</option><option value="cover-bottom">Cắt dưới</option><option value="contain-dark">Hiện đủ nền tối</option><option value="contain-light">Hiện đủ nền sáng</option></select></label>
     <input type="hidden" name="imageZoom" value="100"><input type="hidden" name="imagePosX" value="50"><input type="hidden" name="imagePosY" value="50">
     <div class="crop-editor">

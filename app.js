@@ -89,7 +89,7 @@ function renderMenu() {
   $("#menuGrid").innerHTML = list.map(item => {
     const fitClass = escapeHtml(item.imageFit || "custom-crop");
     const art = item.imageUrl
-      ? `<img class="${fitClass} menu-img-crop" style="--img-zoom:${Number(item.imageZoom || 100) / 100};--img-x:${Number(item.imagePosX ?? 50)}%;--img-y:${Number(item.imagePosY ?? 50)}%" src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">`
+      ? `<img class="${fitClass} menu-img-crop" style="--img-zoom:${Number(item.imageZoom || 100) / 100};--img-x:${Number(item.imagePosX ?? 50)}%;--img-y:${Number(item.imagePosY ?? 50)}%" src="${escapeHtml(cgApiUrl(item.imageUrl))}" alt="${escapeHtml(item.name)}" loading="lazy">`
       : `<span>${escapeHtml(item.icon || "🍽️")}</span>`;
     return `<article class="food-card ${item.imageUrl ? "has-image" : "no-image"}">
       <div class="food-art">${art}</div>
