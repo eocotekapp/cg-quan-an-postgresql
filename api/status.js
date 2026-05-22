@@ -1,7 +1,7 @@
-const { query, transaction, row } = require("../lib/_db");
-const { send, requireAdmin, money, makeCode } = require("../lib/_utils");
-const { buildLockWindow } = require("../lib/_bookingTime");
-const { sendTelegram, escapeHtml } = require("../lib/_telegram");
+const { query, transaction, row } = require("./_db");
+const { send, requireAdmin, money, makeCode } = require("./_utils");
+const { buildLockWindow } = require("./_bookingTime");
+const { sendTelegram, escapeHtml } = require("./_telegram");
 const allowed={orders:["new","processing","delivering","done","cancelled"],bookings:["new","confirmed","done","cancelled"]};
 
 async function createSession(client,b){

@@ -1,2 +1,2 @@
-const { send, requireAdmin } = require("../lib/_utils");
+const { send, requireAdmin } = require("./_utils");
 module.exports=async function handler(req,res){if(!requireAdmin(req,res))return;send(res,200,{ok:true,summary:{revenue:0,shipOrders:0,tableOrders:0,cancelled:0},message:"Archive PostgreSQL sẽ bổ sung ở bản sau"});};
