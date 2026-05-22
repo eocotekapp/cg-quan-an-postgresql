@@ -2420,3 +2420,97 @@ textarea{min-height:92px;resize:vertical}
 #menuImageClearBtn {
   margin-top: -6px;
 }
+
+/* ===== Fixed 16:9 food images v8 ===== */
+.food-art,
+.food-image,
+.food-img,
+.menu-img,
+.menu-image,
+.menu-card-img,
+.food-card .thumb,
+.menu-card .thumb,
+.food-card picture,
+.menu-card picture {
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  border-radius: 16px 16px 0 0 !important;
+  display: block !important;
+  background: rgba(255,255,255,.06) !important;
+}
+
+.food-art img,
+.food-image img,
+.food-img img,
+.menu-img img,
+.menu-image img,
+.menu-card-img img,
+.food-card .thumb img,
+.menu-card .thumb img,
+.food-card picture img,
+.menu-card picture img,
+.food-card > img,
+.menu-card > img,
+.food-card img.food-photo,
+.menu-card img.food-photo {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  display: block !important;
+}
+
+/* Admin menu list thumbnail: fixed 16:9 */
+.admin-menu-item .food-art,
+.admin-menu-row .food-art,
+.admin-menu-card .food-art,
+.menu-list-item .food-art,
+.menu-admin-card .food-art,
+.admin-menu-item img,
+.admin-menu-row img,
+.admin-menu-card img,
+.menu-list-item img,
+.menu-admin-card img {
+  aspect-ratio: 16 / 9 !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+}
+
+/* If the admin list uses horizontal rows, keep a stable thumbnail box */
+.admin-menu-item .food-art,
+.admin-menu-row .food-art,
+.admin-menu-card .food-art,
+.menu-list-item .food-art,
+.menu-admin-card .food-art {
+  flex: 0 0 clamp(120px, 24vw, 220px) !important;
+  width: clamp(120px, 24vw, 220px) !important;
+  height: auto !important;
+  border-radius: 16px !important;
+}
+
+/* Customer menu cards: same image height ratio on every screen */
+.food-card,
+.menu-card {
+  overflow: hidden !important;
+}
+
+.food-card .food-art,
+.menu-card .food-art {
+  border-radius: 18px 18px 0 0 !important;
+}
+
+@media (max-width: 760px) {
+  .admin-menu-item .food-art,
+  .admin-menu-row .food-art,
+  .admin-menu-card .food-art,
+  .menu-list-item .food-art,
+  .menu-admin-card .food-art {
+    flex-basis: clamp(92px, 34vw, 150px) !important;
+    width: clamp(92px, 34vw, 150px) !important;
+  }
+}
