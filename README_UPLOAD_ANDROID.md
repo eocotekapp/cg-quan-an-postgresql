@@ -34,3 +34,19 @@ app.use("/uploads", express.static(process.env.UPLOAD_DIR || "uploads"));
 ```
 
 Database chỉ lưu URL ảnh do `/api/upload` trả về.
+
+
+## Nếu web báo "Upload ảnh lỗi"
+
+Kiểm tra 3 điểm:
+
+1. API Android phải có route `/api/upload`.
+2. API Android phải serve `/uploads/*`.
+3. Nếu web chạy khác domain với API, `/api/upload` cần CORS. Bản này đã thêm CORS trong `api/upload.js`.
+
+Lệnh env gợi ý Termux:
+
+```bash
+export UPLOAD_DIR=/storage/emulated/0/android-server/uploads
+export PUBLIC_UPLOAD_BASE=https://LINK-CLOUDFLARE-CUA-BAN
+```

@@ -31,6 +31,12 @@ async function api(path, options = {}) {
   if (!res.ok || data.ok === false) throw new Error(data.error || "Có lỗi xảy ra");
   return data;
 }
+function cgUploadUrl(path) {
+  const base = String(window.CG_API_BASE_URL || "").replace(/\/$/, "");
+  const p = String(path || "");
+  return base ? base + p : p;
+}
+
 async function uploadMenuImageIfNeeded(form) {
   const fileInput = document.getElementById("menuImageFile");
   const file = fileInput?.files?.[0];
@@ -43,16 +49,22 @@ async function uploadMenuImageIfNeeded(form) {
   if (file.size > max) throw new Error("Ảnh quá lớn. Tối đa 8MB");
 
   const fd = new FormData();
-  fd.append("image", file);
+  fd.append("image", file, file.name || "menu-image.jpg");
 
-  const res = await cgFetch("/api/upload", {
+  const res = await fetch(cgUploadUrl("/api/upload"), {
     method: "POST",
     headers: { "x-admin-pin": pin },
     body: fd
   });
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.ok === false) throw new Error(data.error || "Upload ảnh lỗi");
+  const text = await res.text();
+  let data = {};
+  try { data = JSON.parse(text); } catch (_) {}
+
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.error || text || `Upload ảnh lỗi HTTP ${res.status}`);
+  }
+
   return data.url || data.relativeUrl || "";
 }
 
