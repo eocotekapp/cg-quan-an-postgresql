@@ -36,14 +36,6 @@
             <p class="muted">BigFix v14: ưu tiên ổn định, đơn và menu phải chạy trước.</p>
           </div>
           <div class="tabs vertical-tabs">
-            <button class="tab-btn active" data-tab="dashboard" type="button">Dashboard</button>
-            <button class="tab-btn" data-tab="orders" type="button">Đơn ship</button>
-            <button class="tab-btn" data-tab="bookings" type="button">Đặt bàn</button>
-            <button class="tab-btn" data-tab="tables" type="button">Sơ đồ bàn</button>
-            <button class="tab-btn" data-tab="sessions" type="button">Phiên bàn</button>
-            <button class="tab-btn" data-tab="menu" type="button">Menu món</button>
-            <button class="tab-btn" data-tab="inventory" type="button">Kho</button>
-            
           </div>
           <button id="refreshBtn" class="btn primary full" type="button">Tải lại dữ liệu</button>
           <small id="refreshHint" class="refresh-hint">Tự cập nhật mỗi 2 giây</small>
@@ -124,7 +116,31 @@
             <div id="inventoryList" class="admin-list menu-table-list"></div>
           </section>
 
-          
+          <section id="analyticsPanel" class="hidden">
+            <div class="analytics-toolbar">
+              <div><h2>Doanh thu & lãi/lỗ</h2><p class="muted">Dashboard chi tiết, theo hôm nay/tuần/tháng/năm.</p></div>
+              <div class="range-buttons"><button class="range-btn active" data-range="day" type="button">Hôm nay</button><button class="range-btn" data-range="week" type="button">7 ngày</button><button class="range-btn" data-range="month" type="button">Tháng</button><button class="range-btn" data-range="year" type="button">Năm</button></div>
+            </div>
+            <div class="analytics-grid">
+              <article><span>Doanh thu</span><b id="reportRevenue">0đ</b></article>
+              <article><span>Giá vốn</span><b id="reportCost">0đ</b></article>
+              <article><span>Lãi</span><b id="reportProfit">0đ</b></article>
+              <article><span>Đơn hoàn thành</span><b id="reportCompleted">0</b></article>
+            </div>
+            <div id="analyticsDetail" class="analytics-detail"></div>
+            <div class="chart-card"><div class="chart-head"><h3>Sơ đồ doanh thu</h3><p class="muted">Vàng doanh thu • Xanh lãi • Đỏ lỗ</p></div><div id="revenueChart" class="revenue-chart"></div></div>
+            <div id="hourChart" class="chart-card"></div>
+            <div class="chart-card"><div class="chart-head"><h3>Món tạo doanh thu cao</h3></div><div id="topItemsList" class="top-items-list"></div></div>
+            <div class="archive-box">
+              <h3>Lưu trữ & dọn doanh thu năm cũ</h3>
+              <div class="form-row">
+                <label class="field"><span>Năm cần xem/xử lý</span><input id="archiveYearInput" type="number" min="2020" max="2100" inputmode="numeric" pattern="[0-9]*"></label>
+                <label class="field"><span>Thao tác</span><select id="archiveAction"><option value="view">Xem báo cáo năm</option><option value="closeYear">Chốt báo cáo năm</option><option value="deleteYearRevenue">Xoá doanh thu năm cũ</option></select></label>
+              </div>
+              <button id="archiveRunBtn" class="btn primary" type="button">Thực hiện</button>
+              <div id="archiveResult" class="archive-result muted"></div>
+            </div>
+          </section>
         </section>
       </div>
     </section>

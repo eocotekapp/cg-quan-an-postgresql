@@ -295,7 +295,7 @@ function renderMiniOrderCard(item){
   const icon = isBooking ? "🪑" : "🚚";
   const statusBadge = status === "new" ? "MỚI" : getStatusLabel(item.status);
 
-  return `<article class="admin-card orders-order-card ${isBooking ? "booking-card" : "ship-card"}">
+  return `<article class="admin-card dashboard-order-card ${isBooking ? "booking-card" : "ship-card"}">
     <div class="dash-order-top">
       <div class="dash-order-title"><span class="dash-icon">${icon}</span><b>${title}</b><span>•</span><em>${codeText}</em></div>
       <span class="status status-${escapeHtml(item.status || "new")}">${escapeHtml(statusBadge)}</span>
@@ -345,10 +345,10 @@ function renderDashboardFeed(orders, bookings){
 
   const titleMap = {new:"Đơn chờ xác nhận",confirmed:"Đơn đã xác nhận",done:"Đơn hoàn thành",cancelled:"Đơn đã hủy"};
   const kindMap = {all:"Tất cả",bookings:"Đơn đặt bàn",orders:"Đơn ship"};
-  const title = document.querySelector("#ordersPanel h2");
+  const title = document.querySelector("#dashboardPanel h2");
   if (title) title.textContent = `${titleMap[currentStatusFilter] || "Dashboard"} • ${kindMap[currentKindFilter] || "Tất cả"} (${list.length})`;
 
-  const box = $("#ordersList");
+  const box = $("#dashboardList");
   if (box) {
     box.innerHTML = list.length ? list.slice(0,80).map(renderAppOrderCard).join("") : `<p class="muted empty-state">Không có đơn trong mục này.</p>`;
   }
@@ -359,24 +359,26 @@ function renderDashboardFeed(orders, bookings){
 function openDrawer(){ document.body.classList.add("drawer-open"); }
 function closeDrawer(){ document.body.classList.remove("drawer-open"); }
 function showPanel(tab){
+  ["dashboard","orders","bookings","tables","sessions","menu","inventory","analytics"].forEach(name=>$(`#${name}Panel`)?.classList.toggle("hidden", name !== tab));
   $$(".tab-btn").forEach(x=>x.classList.toggle("active", x.dataset.tab === tab));
+  if(tab === "analytics") loadAnalytics(currentRange);
   closeDrawer();
 }
 function setStatusFilter(status){
   currentStatusFilter = status || "new";
   $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
-  showPanel("orders");
+  showPanel("dashboard");
   loadDashboard(); bindActions();
 }
 
 function showDashboard(){
   $("#pinScreen").classList.add("hidden");
-  $("#orders").classList.remove("hidden");
+  $("#dashboard").classList.remove("hidden");
   setDefaultDateTime();
   loadDashboard(); bindActions();startAutoRefresh();
 }
 function showPin(){
-  $("#orders").classList.add("hidden");
+  $("#dashboard").classList.add("hidden");
   $("#pinScreen").classList.remove("hidden");
 }
 function setDefaultDateTime(){
@@ -426,6 +428,7 @@ async function loadDashboard(){
     renderTables(tableCache);
     renderInventory(inventoryCache);
     renderSessions(sessionCache);
+    loadAnalytics(currentRange);
 
     const hint=$("#refreshHint");
     if(hint) hint.textContent=`Tự cập nhật: ${new Date().toLocaleTimeString("vi-VN")}`;
@@ -612,13 +615,17 @@ function renderInventory(items){
   </div>` : `<p class="muted">Chưa có nguyên liệu.</p>`;
   bindInventoryActions(items);
 }
+async function loadAnalytics(range=currentRange){
   currentRange=range;
+  try{ renderAnalytics(await api(`/api/analytics?range=${encodeURIComponent(range)}`)); }catch(e){ toast(e.message,"error"); }
 }
+function renderAnalytics(data){
   const s=data.summary||{};
   $("#reportRevenue").textContent=money(s.revenue||0);
   $("#reportCost").textContent=money(s.cost||0);
   $("#reportProfit").textContent=money(s.profit||0);
   $("#reportCompleted").textContent=s.completedOrders||0;
+  $("#analyticsDetail").innerHTML=`
     <article><span>Tổng đơn</span><b>${s.orders||0}</b></article><article><span>Đơn ship</span><b>${s.shipOrders||0}</b></article>
     <article><span>Đơn tại bàn</span><b>${s.tableOrders||0}</b></article><article><span>Đơn huỷ</span><b>${s.cancelledOrders||0}</b></article>
     <article><span>Sản phẩm bán</span><b>${s.itemsSold||0}</b></article>
@@ -853,17 +860,18 @@ $$(".bottom-task").forEach(btn=>btn.addEventListener("click",()=>setStatusFilter
 $$(".view-mode").forEach(btn=>btn.addEventListener("click",()=>{
   currentKindFilter = btn.dataset.kindFilter || "all";
   $$(".view-mode").forEach(x=>x.classList.toggle("active", x.dataset.kindFilter === currentKindFilter));
-  showPanel("orders");
+  showPanel("dashboard");
   loadDashboard(); bindActions();}));
 $$("[data-jump-status]").forEach(card=>card.addEventListener("click",()=>{
   currentStatusFilter = card.dataset.jumpStatus || "new";
   currentKindFilter = card.dataset.jumpKind || "all";
   $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
   $$(".view-mode").forEach(x=>x.classList.toggle("active", x.dataset.kindFilter === currentKindFilter));
-  showPanel("orders");
+  showPanel("dashboard");
   loadDashboard(); bindActions();}));
 
-$$(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>showPanel(btn.dataset.tab || "orders")));
+$$(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>showPanel(btn.dataset.tab || "dashboard")));
+$$(".range-btn").forEach(btn=>btn.addEventListener("click",()=>{ $$(".range-btn").forEach(x=>x.classList.remove("active")); btn.classList.add("active"); loadAnalytics(btn.dataset.range); }));
 $("#tableDateFilter")?.addEventListener("change",loadDashboard); $("#tableTimeFilter")?.addEventListener("change",loadDashboard);
 
 $("#addMenuBtn").addEventListener("click",()=>openMenuForm());
@@ -980,3 +988,16 @@ document.addEventListener("click", function(e){
   e.stopPropagation();
   closeSessionMenuModal();
 }, true);
+
+
+/* Safe hide old revenue/analytics tab */
+(function hideRevenueOnlySafe(){
+  function run(){
+    document.querySelectorAll('[data-tab="analytics"],[data-tab="revenue"],[data-tab="doanhthu"],[data-tab="doanh-thu"]').forEach(el=>el.remove());
+    document.querySelectorAll('button,a').forEach(el=>{
+      if ((el.textContent || "").trim().toLowerCase() === "doanh thu") el.remove();
+    });
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", run);
+  else run();
+})();

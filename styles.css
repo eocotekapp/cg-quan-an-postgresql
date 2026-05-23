@@ -2514,3 +2514,11 @@ textarea{min-height:92px;resize:vertical}
     width: clamp(92px, 34vw, 150px) !important;
   }
 }
+
+/* Hide revenue/analytics tab only */
+[data-tab="analytics"],
+[data-tab="revenue"],
+[data-tab="doanhthu"],
+[data-tab="doanh-thu"] {
+  display: none !important;
+}
