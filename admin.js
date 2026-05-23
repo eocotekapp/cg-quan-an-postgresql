@@ -69,6 +69,14 @@ async function uploadMenuImageIfNeeded(form) {
   return normalizeImageUrl(uploaded);
 }
 
+
+function safeSetHTML(selector, html) {
+  const el = typeof selector === "string" ? $(selector) : selector;
+  if (!el) return false;
+  el.innerHTML = html;
+  return true;
+}
+
 function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
 
 function normalizeImageUrl(url) {
@@ -444,7 +452,7 @@ function renderOrders(items){
   if(!__root) return;
 
   const visible = items.filter(order => order.status !== "done" && order.status !== "cancelled");
-  $("#ordersList").innerHTML = visible.length ? visible.map(order=>{
+  if($("#ordersList")) $("#ordersList").innerHTML = visible.length ? visible.map(order=>{
     const orderItems = Array.isArray(order.items) ? order.items : [];
     const lines=orderItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ");
     const itemsTotal = orderItems.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0);
@@ -482,7 +490,7 @@ function renderBookings(items){
   if(!__root) return;
 
   const visible = items.filter(b => b.status !== "done" && b.status !== "cancelled");
-  $("#bookingsList").innerHTML = visible.length ? visible.map(b=>{
+  if($("#bookingsList")) $("#bookingsList").innerHTML = visible.length ? visible.map(b=>{
     const preorderItems = Array.isArray(b.preorderItems) ? b.preorderItems : [];
     const preTotal = b.preorderSubtotal || preorderItems.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0);
     const preText = preorderItems.length ? preorderItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ") + ` • ${money(preTotal)}` : "Không có";
@@ -549,7 +557,7 @@ function renderSessions(items){
   if(!__root) return;
 
   const open=items.filter(s=>s.status==="open");
-  $("#sessionsList").innerHTML=open.length ? open.map(s=>{
+  if($("#sessionsList")) $("#sessionsList").innerHTML=open.length ? open.map(s=>{
     const sessionItems = Array.isArray(s.summaryItems) ? s.summaryItems : [];
     const summary=sessionItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ");
     const sessionItemsBox = sessionItems.length ? `<div class="admin-numbered-items-box compact">
@@ -585,7 +593,10 @@ function renderSessions(items){
   bindSessionActions();
 }
 function renderMenuAdmin(items){
-  $("#menuAdminList").innerHTML=items.length ? `<div class="admin-compact-list menu-compact-list">
+  const __root = $("#menuAdminList");
+  if(!__root) return;
+
+  if($("#menuAdminList")) $("#menuAdminList").innerHTML=items.length ? `<div class="admin-compact-list menu-compact-list">
     ${items.map(item=>`<article class="admin-mini-card menu-mini-card">
       <div class="mini-main menu-mini-main">
         ${menuImageHtml(item, "admin-menu-thumb")}
@@ -607,7 +618,10 @@ function renderMenuAdmin(items){
   bindMenuActions(items);
 }
 function renderInventory(items){
-  $("#inventoryList").innerHTML=items.length ? `<div class="admin-compact-list inventory-compact-list">
+  const __root = $("#inventoryList");
+  if(!__root) return;
+
+  if($("#inventoryList")) $("#inventoryList").innerHTML=items.length ? `<div class="admin-compact-list inventory-compact-list">
     ${items.map(item=>`<article class="admin-mini-card inventory-mini-card ${item.low?"low-stock":""}">
       <div class="mini-main">
         <div class="mini-title"><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.note||"")}</small></div>
