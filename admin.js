@@ -440,6 +440,9 @@ async function loadDashboard(){
 }
 
 function renderOrders(items){
+  const __root = $("#ordersList");
+  if(!__root) return;
+
   const visible = items.filter(order => order.status !== "done" && order.status !== "cancelled");
   $("#ordersList").innerHTML = visible.length ? visible.map(order=>{
     const orderItems = Array.isArray(order.items) ? order.items : [];
@@ -475,6 +478,9 @@ function renderOrders(items){
   bindActions(); bindDeleteActions();
 }
 function renderBookings(items){
+  const __root = $("#bookingsList");
+  if(!__root) return;
+
   const visible = items.filter(b => b.status !== "done" && b.status !== "cancelled");
   $("#bookingsList").innerHTML = visible.length ? visible.map(b=>{
     const preorderItems = Array.isArray(b.preorderItems) ? b.preorderItems : [];
@@ -525,6 +531,9 @@ function renderBookings(items){
   bindActions(); bindDeleteActions(); bindSessionActions();
 }
 function renderTables(items){
+  const __root = $("#tablesList");
+  if(!__root) return;
+
   tableCache=items;
   $$(".admin-table-node").forEach(node=>{
     const t=items.find(x=>x.id===node.dataset.adminTable);
@@ -536,6 +545,9 @@ function renderTables(items){
   $("#tableDetail").innerHTML=items.map(t=>`<div class="table-mini-row"><b>${escapeHtml(t.id)}</b><span>${getStatusLabel(t.locked?"locked":t.status)}</span><small>${escapeHtml(t.zone||"")}</small></div>`).join("");
 }
 function renderSessions(items){
+  const __root = $("#sessionsList");
+  if(!__root) return;
+
   const open=items.filter(s=>s.status==="open");
   $("#sessionsList").innerHTML=open.length ? open.map(s=>{
     const sessionItems = Array.isArray(s.summaryItems) ? s.summaryItems : [];
