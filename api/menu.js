@@ -4,6 +4,20 @@ const path = require("path");
 const { query, rows } = require("./_db");
 const { send, cleanString, requireAdmin } = require("./_utils");
 
+function normalizeUploadPath(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const u = new URL(raw);
+      if (u.pathname.startsWith("/uploads/")) return u.pathname;
+    } catch (_) {}
+  }
+  if (raw.startsWith("/uploads/")) return raw;
+  return raw;
+}
+
+
 function parseMoneyVN(value) {
   if (typeof value === "number") return value;
   const raw = String(value || "").replace(/[^\d]/g, "");
@@ -94,6 +108,8 @@ module.exports = async function handler(req,res){
     if(req.method==="POST"){
       if(!requireAdmin(req,res)) return;
       const b=req.body||{};
+  if (b.image_url !== undefined) b.image_url = normalizeUploadPath(b.image_url);
+  if (b.imageUrl !== undefined) b.imageUrl = normalizeUploadPath(b.imageUrl);
       if(!cleanString(b.name,120)) return send(res,400,{ok:false,error:"Thiếu tên món"});
 
       const id=cleanString(b.id||slug(b.name),120);
