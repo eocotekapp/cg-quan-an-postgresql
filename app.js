@@ -1,4 +1,27 @@
 
+function getApiBaseUrlForImage() {
+  const cfg = (typeof CONFIG !== "undefined" && CONFIG) ? CONFIG : {};
+  return String(
+    window.API_URL ||
+    window.API_BASE ||
+    window.CG_API_BASE_URL ||
+    cfg.API_URL ||
+    cfg.API_BASE ||
+    cfg.apiUrl ||
+    ""
+  ).replace(/\/$/, "");
+}
+
+function fullImageUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("/uploads/")) return `${getApiBaseUrlForImage()}${raw}`;
+  if (raw.startsWith("uploads/")) return `${getApiBaseUrlForImage()}/${raw}`;
+  return raw;
+}
+
+
 function normalizeImageUrl(url) {
   let u = String(url || "").trim();
   if (!u) return "";
@@ -323,7 +346,7 @@ async function submitBooking(e) {
     }
     const body = Object.fromEntries(new FormData(e.target).entries());
     if (!isValidVNPhoneInput(body.phone)) {
-      toast("Vui lòng nhập 10 số điện thoại.", "error");
+      toast("Số điện thoại chưa đúng. Vui lòng nhập 10 số, ví dụ: 0912345678.", "error");
       e.target.phone?.focus?.();
       return;
     }

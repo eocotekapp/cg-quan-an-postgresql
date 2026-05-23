@@ -1,3 +1,26 @@
+
+function getApiBaseUrlForImage() {
+  const cfg = (typeof CONFIG !== "undefined" && CONFIG) ? CONFIG : {};
+  return String(
+    window.API_URL ||
+    window.API_BASE ||
+    window.CG_API_BASE_URL ||
+    cfg.API_URL ||
+    cfg.API_BASE ||
+    cfg.apiUrl ||
+    ""
+  ).replace(/\/$/, "");
+}
+
+function fullImageUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("/uploads/")) return `${getApiBaseUrlForImage()}${raw}`;
+  if (raw.startsWith("uploads/")) return `${getApiBaseUrlForImage()}/${raw}`;
+  return raw;
+}
+
 function cgApiUrl(path){
   const base = (window.CG_API_BASE_URL || localStorage.getItem("CG_API_BASE_URL") || "").replace(/\/$/, "");
   const p = String(path || "");
@@ -651,7 +674,7 @@ function updateCropPreview(){
     img.dataset.objectUrl=URL.createObjectURL(file);
     img.src=img.dataset.objectUrl;
   }else{
-    img.src=normalizeImageUrl(f.imageUrl.value.trim())||"";
+    img.src=fullImageUrl(normalizeImageUrl(f.imageUrl.value.trim())||"");
   }
   img.className=f.imageFit.value||"custom-crop";
   img.style.setProperty("--img-zoom", zoom/100);
