@@ -989,15 +989,23 @@ document.addEventListener("click", function(e){
   closeSessionMenuModal();
 }, true);
 
-
-/* Safe hide old revenue/analytics tab */
-(function hideRevenueOnlySafe(){
+/* ===== Safe hide revenue tab only ===== */
+(function hideRevenueTabOnly(){
   function run(){
-    document.querySelectorAll('[data-tab="analytics"],[data-tab="revenue"],[data-tab="doanhthu"],[data-tab="doanh-thu"]').forEach(el=>el.remove());
-    document.querySelectorAll('button,a').forEach(el=>{
-      if ((el.textContent || "").trim().toLowerCase() === "doanh thu") el.remove();
+    document.querySelectorAll('[data-tab="analytics"],[data-tab="revenue"],[data-tab="doanhthu"],[data-tab="doanh-thu"]').forEach(el => el.remove());
+
+    document.querySelectorAll('.admin-sidebar button, .tabs button, .vertical-tabs button, .bottom-taskbar button').forEach(btn => {
+      const text = (btn.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+      if (text === "doanh thu") btn.remove();
     });
   }
-  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", run);
-  else run();
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", run);
+  } else {
+    run();
+  }
+
+  setTimeout(run, 300);
+  setTimeout(run, 1000);
 })();

@@ -2515,10 +2515,18 @@ textarea{min-height:92px;resize:vertical}
   }
 }
 
-/* Hide revenue/analytics tab only */
-[data-tab="analytics"],
-[data-tab="revenue"],
-[data-tab="doanhthu"],
-[data-tab="doanh-thu"] {
+/* ===== Chỉ ẩn tab Doanh thu cũ, không xoá tab khác ===== */
+.hide-revenue-tab [data-tab="analytics"],
+.hide-revenue-tab [data-tab="revenue"],
+.hide-revenue-tab [data-tab="doanhthu"],
+.hide-revenue-tab [data-tab="doanh-thu"],
+.admin-sidebar [data-tab="analytics"],
+.admin-sidebar [data-tab="revenue"],
+.admin-sidebar [data-tab="doanhthu"],
+.admin-sidebar [data-tab="doanh-thu"],
+.bottom-taskbar [data-tab="analytics"],
+.bottom-taskbar [data-tab="revenue"],
+.bottom-taskbar [data-tab="doanhthu"],
+.bottom-taskbar [data-tab="doanh-thu"] {
   display: none !important;
 }

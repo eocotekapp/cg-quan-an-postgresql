@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/styles.css?v=32">
   <link rel="stylesheet" href="/admin-session-view.css?v=35">
 </head>
-<body class="admin-page">
+<body class="admin-page hide-revenue-tab">
   <header class="topbar admin-app-topbar">
     <button id="drawerToggleBtn" class="drawer-toggle" type="button" aria-label="Mở menu">☰</button>
     <a class="brand" href="/"><span class="brand-logo">CG</span><span><b>Admin CG Quán Ăn</b><small>Quản lý đơn hàng</small></span></a>
@@ -36,6 +36,14 @@
             <p class="muted">BigFix v14: ưu tiên ổn định, đơn và menu phải chạy trước.</p>
           </div>
           <div class="tabs vertical-tabs">
+            <button class="tab-btn active" data-tab="dashboard" type="button">Dashboard</button>
+            <button class="tab-btn" data-tab="orders" type="button">Đơn ship</button>
+            <button class="tab-btn" data-tab="bookings" type="button">Đặt bàn</button>
+            <button class="tab-btn" data-tab="tables" type="button">Sơ đồ bàn</button>
+            <button class="tab-btn" data-tab="sessions" type="button">Phiên bàn</button>
+            <button class="tab-btn" data-tab="menu" type="button">Menu món</button>
+            <button class="tab-btn" data-tab="inventory" type="button">Kho</button>
+            <button class="tab-btn" data-tab="analytics" type="button">Doanh thu</button>
           </div>
           <button id="refreshBtn" class="btn primary full" type="button">Tải lại dữ liệu</button>
           <small id="refreshHint" class="refresh-hint">Tự cập nhật mỗi 2 giây</small>
