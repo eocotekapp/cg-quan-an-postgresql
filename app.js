@@ -323,7 +323,7 @@ async function submitBooking(e) {
     }
     const body = Object.fromEntries(new FormData(e.target).entries());
     if (!isValidVNPhoneInput(body.phone)) {
-      toast("Số điện thoại chưa đúng. Vui lòng nhập 10 số, ví dụ: 0912345678.", "error");
+      toast("Vui lòng nhập 10 số điện thoại.", "error");
       e.target.phone?.focus?.();
       return;
     }
