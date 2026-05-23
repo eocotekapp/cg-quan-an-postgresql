@@ -69,14 +69,6 @@ async function uploadMenuImageIfNeeded(form) {
   return normalizeImageUrl(uploaded);
 }
 
-
-function safeSetHTML(selector, html) {
-  const el = typeof selector === "string" ? $(selector) : selector;
-  if (!el) return false;
-  el.innerHTML = html;
-  return true;
-}
-
 function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
 
 function normalizeImageUrl(url) {
@@ -303,7 +295,7 @@ function renderMiniOrderCard(item){
   const icon = isBooking ? "🪑" : "🚚";
   const statusBadge = status === "new" ? "MỚI" : getStatusLabel(item.status);
 
-  return `<article class="admin-card dashboard-order-card ${isBooking ? "booking-card" : "ship-card"}">
+  return `<article class="admin-card orders-order-card ${isBooking ? "booking-card" : "ship-card"}">
     <div class="dash-order-top">
       <div class="dash-order-title"><span class="dash-icon">${icon}</span><b>${title}</b><span>•</span><em>${codeText}</em></div>
       <span class="status status-${escapeHtml(item.status || "new")}">${escapeHtml(statusBadge)}</span>
@@ -353,10 +345,10 @@ function renderDashboardFeed(orders, bookings){
 
   const titleMap = {new:"Đơn chờ xác nhận",confirmed:"Đơn đã xác nhận",done:"Đơn hoàn thành",cancelled:"Đơn đã hủy"};
   const kindMap = {all:"Tất cả",bookings:"Đơn đặt bàn",orders:"Đơn ship"};
-  const title = document.querySelector("#dashboardPanel h2");
+  const title = document.querySelector("#ordersPanel h2");
   if (title) title.textContent = `${titleMap[currentStatusFilter] || "Dashboard"} • ${kindMap[currentKindFilter] || "Tất cả"} (${list.length})`;
 
-  const box = $("#dashboardList");
+  const box = $("#ordersList");
   if (box) {
     box.innerHTML = list.length ? list.slice(0,80).map(renderAppOrderCard).join("") : `<p class="muted empty-state">Không có đơn trong mục này.</p>`;
   }
@@ -367,26 +359,24 @@ function renderDashboardFeed(orders, bookings){
 function openDrawer(){ document.body.classList.add("drawer-open"); }
 function closeDrawer(){ document.body.classList.remove("drawer-open"); }
 function showPanel(tab){
-  ["dashboard","orders","bookings","tables","sessions","menu","inventory","analytics"].forEach(name=>$(`#${name}Panel`)?.classList.toggle("hidden", name !== tab));
   $$(".tab-btn").forEach(x=>x.classList.toggle("active", x.dataset.tab === tab));
-  if(tab === "analytics") loadAnalytics(currentRange);
   closeDrawer();
 }
 function setStatusFilter(status){
   currentStatusFilter = status || "new";
   $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
-  showPanel("dashboard");
+  showPanel("orders");
   loadDashboard(); bindActions();
 }
 
 function showDashboard(){
   $("#pinScreen").classList.add("hidden");
-  $("#dashboard").classList.remove("hidden");
+  $("#orders").classList.remove("hidden");
   setDefaultDateTime();
   loadDashboard(); bindActions();startAutoRefresh();
 }
 function showPin(){
-  $("#dashboard").classList.add("hidden");
+  $("#orders").classList.add("hidden");
   $("#pinScreen").classList.remove("hidden");
 }
 function setDefaultDateTime(){
@@ -436,7 +426,6 @@ async function loadDashboard(){
     renderTables(tableCache);
     renderInventory(inventoryCache);
     renderSessions(sessionCache);
-    loadAnalytics(currentRange);
 
     const hint=$("#refreshHint");
     if(hint) hint.textContent=`Tự cập nhật: ${new Date().toLocaleTimeString("vi-VN")}`;
@@ -448,11 +437,8 @@ async function loadDashboard(){
 }
 
 function renderOrders(items){
-  const __root = $("#ordersList");
-  if(!__root) return;
-
   const visible = items.filter(order => order.status !== "done" && order.status !== "cancelled");
-  if($("#ordersList")) $("#ordersList").innerHTML = visible.length ? visible.map(order=>{
+  $("#ordersList").innerHTML = visible.length ? visible.map(order=>{
     const orderItems = Array.isArray(order.items) ? order.items : [];
     const lines=orderItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ");
     const itemsTotal = orderItems.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0);
@@ -486,11 +472,8 @@ function renderOrders(items){
   bindActions(); bindDeleteActions();
 }
 function renderBookings(items){
-  const __root = $("#bookingsList");
-  if(!__root) return;
-
   const visible = items.filter(b => b.status !== "done" && b.status !== "cancelled");
-  if($("#bookingsList")) $("#bookingsList").innerHTML = visible.length ? visible.map(b=>{
+  $("#bookingsList").innerHTML = visible.length ? visible.map(b=>{
     const preorderItems = Array.isArray(b.preorderItems) ? b.preorderItems : [];
     const preTotal = b.preorderSubtotal || preorderItems.reduce((sum,i)=>sum+Number(i.price||0)*Number(i.qty||1),0);
     const preText = preorderItems.length ? preorderItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ") + ` • ${money(preTotal)}` : "Không có";
@@ -539,9 +522,6 @@ function renderBookings(items){
   bindActions(); bindDeleteActions(); bindSessionActions();
 }
 function renderTables(items){
-  const __root = $("#tablesList");
-  if(!__root) return;
-
   tableCache=items;
   $$(".admin-table-node").forEach(node=>{
     const t=items.find(x=>x.id===node.dataset.adminTable);
@@ -553,11 +533,8 @@ function renderTables(items){
   $("#tableDetail").innerHTML=items.map(t=>`<div class="table-mini-row"><b>${escapeHtml(t.id)}</b><span>${getStatusLabel(t.locked?"locked":t.status)}</span><small>${escapeHtml(t.zone||"")}</small></div>`).join("");
 }
 function renderSessions(items){
-  const __root = $("#sessionsList");
-  if(!__root) return;
-
   const open=items.filter(s=>s.status==="open");
-  if($("#sessionsList")) $("#sessionsList").innerHTML=open.length ? open.map(s=>{
+  $("#sessionsList").innerHTML=open.length ? open.map(s=>{
     const sessionItems = Array.isArray(s.summaryItems) ? s.summaryItems : [];
     const summary=sessionItems.map((i,index)=>`${index + 1}. ${escapeHtml(i.name)} x${i.qty}`).join(", ");
     const sessionItemsBox = sessionItems.length ? `<div class="admin-numbered-items-box compact">
@@ -593,10 +570,7 @@ function renderSessions(items){
   bindSessionActions();
 }
 function renderMenuAdmin(items){
-  const __root = $("#menuAdminList");
-  if(!__root) return;
-
-  if($("#menuAdminList")) $("#menuAdminList").innerHTML=items.length ? `<div class="admin-compact-list menu-compact-list">
+  $("#menuAdminList").innerHTML=items.length ? `<div class="admin-compact-list menu-compact-list">
     ${items.map(item=>`<article class="admin-mini-card menu-mini-card">
       <div class="mini-main menu-mini-main">
         ${menuImageHtml(item, "admin-menu-thumb")}
@@ -618,10 +592,7 @@ function renderMenuAdmin(items){
   bindMenuActions(items);
 }
 function renderInventory(items){
-  const __root = $("#inventoryList");
-  if(!__root) return;
-
-  if($("#inventoryList")) $("#inventoryList").innerHTML=items.length ? `<div class="admin-compact-list inventory-compact-list">
+  $("#inventoryList").innerHTML=items.length ? `<div class="admin-compact-list inventory-compact-list">
     ${items.map(item=>`<article class="admin-mini-card inventory-mini-card ${item.low?"low-stock":""}">
       <div class="mini-main">
         <div class="mini-title"><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.note||"")}</small></div>
@@ -641,94 +612,25 @@ function renderInventory(items){
   </div>` : `<p class="muted">Chưa có nguyên liệu.</p>`;
   bindInventoryActions(items);
 }
-async function loadAnalytics(range=currentRange){
   currentRange=range;
-  try{ renderAnalytics(await api(`/api/analytics?range=${encodeURIComponent(range)}`)); }catch(e){ toast(e.message,"error"); }
 }
-function renderAnalytics(data){
-  const root = $("#analyticsView") || $(".admin-content");
-  if(!root) return;
-  const summary = data?.summary || data || {};
-  const series = data?.series || data?.daily || [];
-  const hourly = data?.hourly || [];
-  const topItems = data?.topItems || data?.items || [];
-
-  const revenue = Number(summary.revenue || summary.totalRevenue || 0);
-  const cost = Number(summary.cost || summary.totalCost || summary.capital || 0);
-  const profit = Number(summary.profit ?? (revenue - cost));
-  const completed = Number(summary.completedOrders || summary.completed || 0);
-  const totalOrders = Number(summary.totalOrders || summary.orders || 0);
-  const shipOrders = Number(summary.shipOrders || summary.shippingOrders || 0);
-  const tableOrders = Number(summary.tableOrders || summary.bookingOrders || 0);
-  const cancelled = Number(summary.cancelledOrders || summary.cancelled || 0);
-  const productsSold = Number(summary.productsSold || summary.soldItems || 0);
-  const customers = Number(summary.customersWithPhone || summary.customers || 0);
-  const avgOrder = Number(summary.avgOrder || (completed ? revenue / completed : 0));
-
-  root.innerHTML = `
-    <section class="analytics-shell">
-      <div class="analytics-hero card">
-        <div><div class="eyebrow">THỐNG KÊ</div><h2>Trung tâm thống kê</h2><p>Tổng quan vận hành, đơn hàng, sản phẩm và doanh thu.</p></div>
-        <div class="analytics-tabs">
-          <button class="analytics-subtab active" data-stat-tab="revenue">Doanh thu chi tiết</button>
-          <button class="analytics-subtab" data-stat-tab="orders">Đơn hàng</button>
-          <button class="analytics-subtab" data-stat-tab="products">Sản phẩm</button>
-        </div>
-      </div>
-      <div class="stat-panel active" data-stat-panel="revenue">
-        <div class="analytics-grid pro">
-          ${statCard("Doanh thu", money(revenue), "Tổng tiền đơn hoàn thành")}
-          ${statCard("Giá vốn", money(cost), "Tổng vốn theo món đã bán")}
-          ${statCard(profit >= 0 ? "Lãi" : "Lỗ", money(Math.abs(profit)), "Doanh thu - giá vốn")}
-          ${statCard("TB/đơn", money(avgOrder), "Trung bình mỗi đơn hoàn thành")}
-        </div>
-        <div class="analytics-chart-card card"><div class="chart-head"><h3>Sơ đồ doanh thu</h3><span>Vàng: doanh thu • Xanh: lãi • Đỏ: lỗ</span></div>${renderRevenueBars(series)}</div>
-        <div class="analytics-chart-card card"><div class="chart-head"><h3>Doanh thu theo giờ</h3><span>Nhận diện giờ cao điểm</span></div>${renderHourlyBars(hourly)}</div>
-      </div>
-      <div class="stat-panel" data-stat-panel="orders">
-        <div class="analytics-grid pro">
-          ${statCard("Tổng đơn", totalOrders, "Tất cả đơn trong kỳ")}
-          ${statCard("Đơn hoàn thành", completed, "Đã hoàn tất")}
-          ${statCard("Đơn ship", shipOrders, "Đơn giao hàng")}
-          ${statCard("Đơn tại bàn", tableOrders, "Đơn đặt bàn / phiên bàn")}
-          ${statCard("Đơn huỷ", cancelled, "Đơn bị huỷ")}
-          ${statCard("Khách có SĐT", customers, "Khách để lại số")}
-        </div>
-      </div>
-      <div class="stat-panel" data-stat-panel="products">
-        <div class="analytics-grid pro">
-          ${statCard("Sản phẩm bán", productsSold, "Tổng số lượng món đã bán")}
-          ${statCard("Món top", topItems?.[0]?.name || "Chưa có", topItems?.[0] ? money(topItems[0].revenue || 0) : "Chưa có dữ liệu")}
-        </div>
-        <div class="analytics-chart-card card"><div class="chart-head"><h3>Top món tạo doanh thu</h3><span>Theo doanh thu</span></div>${renderTopItems(topItems)}</div>
-      </div>
-    </section>`;
-  $$(".analytics-subtab").forEach(btn=>{
-    btn.onclick=()=>{
-      const tab=btn.dataset.statTab;
-      $$(".analytics-subtab").forEach(x=>x.classList.toggle("active", x===btn));
-      $$("[data-stat-panel]").forEach(p=>p.classList.toggle("active", p.dataset.statPanel===tab));
-    };
-  });
+  const s=data.summary||{};
+  $("#reportRevenue").textContent=money(s.revenue||0);
+  $("#reportCost").textContent=money(s.cost||0);
+  $("#reportProfit").textContent=money(s.profit||0);
+  $("#reportCompleted").textContent=s.completedOrders||0;
+    <article><span>Tổng đơn</span><b>${s.orders||0}</b></article><article><span>Đơn ship</span><b>${s.shipOrders||0}</b></article>
+    <article><span>Đơn tại bàn</span><b>${s.tableOrders||0}</b></article><article><span>Đơn huỷ</span><b>${s.cancelledOrders||0}</b></article>
+    <article><span>Sản phẩm bán</span><b>${s.itemsSold||0}</b></article>
+    <article><span>Khách có SĐT</span><b>${s.customers||0}</b></article><article><span>TB/đơn</span><b>${money(s.averageOrder||0)}</b></article>`;
+  const rows=data.byDate||[];
+  const max=Math.max(1,...rows.map(r=>Math.max(Number(r.revenue||0),Math.abs(Number(r.profit||0)))));
+  $("#revenueChart").innerHTML=rows.length ? rows.map(r=>`<div class="chart-day"><div class="bars"><div class="bar revenue-bar" style="height:${Math.max(8,Math.round((r.revenue/max)*170))}px"></div><div class="bar ${r.profit>=0?"profit-bar":"loss-bar"}" style="height:${Math.max(8,Math.round((Math.abs(r.profit)/max)*170))}px"></div></div><small>${escapeHtml(r.date.slice(5))}</small></div>`).join("") : `<p class="muted">Chưa có dữ liệu.</p>`;
+  const hrs=data.byHour||[];
+  const hmax=Math.max(1,...hrs.map(h=>h.revenue||0));
+  $("#hourChart").innerHTML=`<div class="chart-head"><h3>Doanh thu theo giờ</h3><p class="muted">Nhận diện giờ cao điểm</p></div>` + (hrs.length ? hrs.map(h=>`<div class="hour-row"><span>${escapeHtml(h.hour)}</span><i style="width:${Math.max(4,Math.round((h.revenue/hmax)*100))}%"></i><b>${money(h.revenue)} • ${h.orders} đơn</b></div>`).join("") : `<p class="muted">Chưa có dữ liệu.</p>`);
+  $("#topItemsList").innerHTML=(data.topItems||[]).length ? (data.topItems||[]).map(i=>`<article class="top-item"><div><b>${escapeHtml(i.name)}</b><span>Đã bán: ${i.qty}</span></div><div><span>Doanh thu</span><b>${money(i.revenue)}</b></div><div><span>Giá vốn</span><b>${money(i.cost)}</b></div><div><span>Lãi</span><b class="${i.profit>=0?"good":"bad"}">${money(i.profit)}</b></div></article>`).join("") : `<p class="muted">Chưa có món phát sinh doanh thu.</p>`;
 }
-function statCard(label, value, note=""){
-  return `<article class="stat-card"><small>${escapeHtml(label)}</small><b>${typeof value === "number" ? value : escapeHtml(String(value))}</b>${note ? `<span>${escapeHtml(String(note))}</span>` : ""}</article>`;
-}
-function renderRevenueBars(series){
-  if(!Array.isArray(series) || !series.length) return `<div class="empty-chart">Chưa có dữ liệu.</div>`;
-  const max=Math.max(...series.map(x=>Number(x.revenue||x.total||0)),1);
-  return `<div class="revenue-bars">${series.map(x=>{const revenue=Number(x.revenue||x.total||0); const cost=Number(x.cost||0); const profit=Number(x.profit ?? (revenue-cost)); const h=Math.max(8,Math.round(revenue/max*100)); return `<div class="revenue-bar-wrap"><div class="revenue-bar ${profit<0?"loss":"profit"}" style="height:${h}%"></div><small>${escapeHtml(String(x.label||x.date||""))}</small><b>${money(revenue)}</b></div>`;}).join("")}</div>`;
-}
-function renderHourlyBars(hourly){
-  if(!Array.isArray(hourly) || !hourly.length) return `<div class="empty-chart big">Chưa có dữ liệu.</div>`;
-  const max=Math.max(...hourly.map(x=>Number(x.revenue||x.total||0)),1);
-  return `<div class="hour-bars">${hourly.map(x=>{const revenue=Number(x.revenue||x.total||0); const h=Math.max(6,Math.round(revenue/max*100)); return `<div class="hour-bar-wrap"><div class="hour-bar" style="height:${h}%"></div><small>${escapeHtml(String(x.hour ?? x.label ?? ""))}</small></div>`;}).join("")}</div>`;
-}
-function renderTopItems(items){
-  if(!Array.isArray(items)||!items.length) return `<div class="empty-chart big">Chưa có món phát sinh doanh thu.</div>`;
-  return `<div class="top-products">${items.slice(0,8).map((x,i)=>`<div class="top-product-row"><b>${i+1}</b><span>${escapeHtml(x.name||"Món")}</span><strong>${money(Number(x.revenue||0))}</strong><small>x${Number(x.quantity||x.qty||0)}</small></div>`).join("")}</div>`;
-}
-
 
 function updateCropPreview(){
   const f=$("#menuForm"), img=$("#cropPreviewImg");
@@ -951,18 +853,17 @@ $$(".bottom-task").forEach(btn=>btn.addEventListener("click",()=>setStatusFilter
 $$(".view-mode").forEach(btn=>btn.addEventListener("click",()=>{
   currentKindFilter = btn.dataset.kindFilter || "all";
   $$(".view-mode").forEach(x=>x.classList.toggle("active", x.dataset.kindFilter === currentKindFilter));
-  showPanel("dashboard");
+  showPanel("orders");
   loadDashboard(); bindActions();}));
 $$("[data-jump-status]").forEach(card=>card.addEventListener("click",()=>{
   currentStatusFilter = card.dataset.jumpStatus || "new";
   currentKindFilter = card.dataset.jumpKind || "all";
   $$(".bottom-task").forEach(x=>x.classList.toggle("active", x.dataset.statusFilter === currentStatusFilter));
   $$(".view-mode").forEach(x=>x.classList.toggle("active", x.dataset.kindFilter === currentKindFilter));
-  showPanel("dashboard");
+  showPanel("orders");
   loadDashboard(); bindActions();}));
 
-$$(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>showPanel(btn.dataset.tab || "dashboard")));
-$$(".range-btn").forEach(btn=>btn.addEventListener("click",()=>{ $$(".range-btn").forEach(x=>x.classList.remove("active")); btn.classList.add("active"); loadAnalytics(btn.dataset.range); }));
+$$(".tab-btn").forEach(btn=>btn.addEventListener("click",()=>showPanel(btn.dataset.tab || "orders")));
 $("#tableDateFilter")?.addEventListener("change",loadDashboard); $("#tableTimeFilter")?.addEventListener("change",loadDashboard);
 
 $("#addMenuBtn").addEventListener("click",()=>openMenuForm());
