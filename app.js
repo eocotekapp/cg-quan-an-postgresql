@@ -299,6 +299,16 @@ async function submitDineInOrder(e) {
   } finally { setLoading(btn, false); }
 }
 
+
+function normalizeVNPhoneInput(value) {
+  return String(value || "").replace(/[^\d]/g, "");
+}
+
+function isValidVNPhoneInput(value) {
+  const phone = normalizeVNPhoneInput(value);
+  return /^(0\d{9}|84\d{9})$/.test(phone);
+}
+
 async function submitBooking(e) {
   e.preventDefault();
   const btn = e.submitter;
@@ -312,6 +322,12 @@ async function submitBooking(e) {
       return;
     }
     const body = Object.fromEntries(new FormData(e.target).entries());
+    if (!isValidVNPhoneInput(body.phone)) {
+      toast("Số điện thoại chưa đúng. Vui lòng nhập 10 số, ví dụ: 0912345678.", "error");
+      e.target.phone?.focus?.();
+      return;
+    }
+
     const preorderItems = getCartPreorderItems();
     const preorderSubtotal = getCartSubtotal();
     body.table = selectedTable;
@@ -361,3 +377,21 @@ setDefaultBookingDateTime();
 setupTableMap();
 renderCart();
 loadMenu();
+
+
+/* ===== Format nhập tiền Việt Nam cho input khách nếu có ===== */
+(function bindPublicMoneyInputs(){
+  function normalize(value){ return String(value || "").replace(/[^\d]/g, ""); }
+  function fmt(value){ const raw = normalize(value); return raw ? Number(raw).toLocaleString("vi-VN") : ""; }
+  function bind(){
+    document.querySelectorAll('input[data-money], .money-input').forEach(input=>{
+      if(input.dataset.vndBound === "1") return;
+      input.dataset.vndBound = "1";
+      input.inputMode = "numeric";
+      input.value = fmt(input.value);
+      input.addEventListener("input",()=>{ input.value = fmt(input.value); });
+    });
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
+  else bind();
+})();

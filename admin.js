@@ -880,6 +880,12 @@ $("#menuForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const form=e.target;
   const data=Object.fromEntries(new FormData(form).entries());
+    if ("price" in data) data.price = readVietnamMoneyValue(data.price);
+    if ("originalPrice" in data) data.originalPrice = readVietnamMoneyValue(data.originalPrice);
+    if ("original_price" in data) data.original_price = readVietnamMoneyValue(data.original_price);
+    if ("cost" in data) data.cost = readVietnamMoneyValue(data.cost);
+    if ("capital" in data) data.capital = readVietnamMoneyValue(data.capital);
+
   delete data.imageFile;
   data.originalPrice=Number(data.originalPrice||0);
   data.price=Number(data.price||0);
@@ -1009,3 +1015,53 @@ document.addEventListener("click", function(e){
   setTimeout(run, 300);
   setTimeout(run, 1000);
 })();
+
+
+/* ===== Format nhập tiền Việt Nam ===== */
+function normalizeMoneyInput(value) {
+  return String(value || "").replace(/[^\d]/g, "");
+}
+
+function formatVNDInput(value) {
+  const raw = normalizeMoneyInput(value);
+  if (!raw) return "";
+  return Number(raw).toLocaleString("vi-VN");
+}
+
+function bindVietnamMoneyInputs(root = document) {
+  const selectors = [
+    'input[name="price"]',
+    'input[name="originalPrice"]',
+    'input[name="original_price"]',
+    'input[name="cost"]',
+    'input[name="capital"]',
+    'input[data-money]',
+    '.money-input'
+  ].join(",");
+
+  root.querySelectorAll(selectors).forEach(input => {
+    if (input.dataset.vndBound === "1") return;
+    input.dataset.vndBound = "1";
+    input.inputMode = "numeric";
+    input.autocomplete = "off";
+
+    input.value = formatVNDInput(input.value);
+
+    input.addEventListener("input", () => {
+      const caretAtEnd = input.selectionStart === input.value.length;
+      input.value = formatVNDInput(input.value);
+      if (caretAtEnd) input.setSelectionRange(input.value.length, input.value.length);
+    });
+
+    input.addEventListener("blur", () => {
+      input.value = formatVNDInput(input.value);
+    });
+  });
+}
+
+function readVietnamMoneyValue(value) {
+  return Number(normalizeMoneyInput(value) || 0);
+}
+
+document.addEventListener("DOMContentLoaded", () => bindVietnamMoneyInputs());
+document.addEventListener("click", () => setTimeout(() => bindVietnamMoneyInputs(), 50), true);
