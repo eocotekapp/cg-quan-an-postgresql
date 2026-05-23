@@ -4,6 +4,13 @@ const path = require("path");
 const { query, rows } = require("./_db");
 const { send, cleanString, requireAdmin } = require("./_utils");
 
+function parseMoneyVN(value) {
+  if (typeof value === "number") return value;
+  const raw = String(value || "").replace(/[^\d]/g, "");
+  return Number(raw || 0);
+}
+
+
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "uploads");
 
 function slug(s) {
@@ -92,8 +99,8 @@ module.exports = async function handler(req,res){
       const id=cleanString(b.id||slug(b.name),120);
       const oldImageUrl = await getOldImageById(id);
 
-      const price=Number(b.price||0);
-      const originalPrice=Number(b.originalPrice||0);
+      const price=parseMoneyVN(b.price);
+      const originalPrice=parseMoneyVN(b.originalPrice);
       const profit=price-originalPrice;
       const newImageUrl=cleanString(b.imageUrl||"",1000);
 

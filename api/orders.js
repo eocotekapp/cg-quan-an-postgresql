@@ -2,6 +2,16 @@ const { query, rows, row } = require("./_db");
 const { send, requireAdmin, money, makeCode } = require("./_utils");
 const { sendTelegram, escapeHtml } = require("./_telegram");
 
+function normalizeVNPhone(value) {
+  return String(value || "").replace(/[^\d]/g, "");
+}
+
+function isValidVNPhone(value) {
+  const phone = normalizeVNPhone(value);
+  return /^(0\d{9}|84\d{9})$/.test(phone);
+}
+
+
 function mapOrder(r){return{ id:r.id,orderCode:r.order_code,type:r.type,customer:r.customer||{},items:r.items||[],subtotal:Number(r.subtotal||0),discount:Number(r.discount||0),shippingFee:Number(r.shipping_fee||0),total:Number(r.total||0),status:r.status,createdAt:r.created_at,updatedAt:r.updated_at};}
 function cleanItems(items){return(Array.isArray(items)?items:[]).map(x=>({id:String(x.id||""),name:String(x.name||"Món"),price:Number(x.price||0),qty:Math.max(1,Number(x.qty||1))})).filter(x=>x.name);}
 
@@ -29,6 +39,14 @@ module.exports=async function handler(req,res){
   if(req.method==="PUT"){
     if(!requireAdmin(req,res)) return;
     const b=req.body||{};
+    const orderPhone = b.phone || b.customerPhone || b.customer_phone || b.tel || "";
+    if (orderPhone && !isValidVNPhone(orderPhone)) {
+      return send(res, 400, {
+        ok: false,
+        error: "Số điện thoại chưa đúng. Vui lòng nhập 10 số, ví dụ: 0912345678."
+      });
+    }
+
     const old=row(await query("SELECT * FROM orders WHERE id=$1",[b.id]));
     if(!old) return send(res,404,{ok:false,error:"Không tìm thấy đơn"});
     const shippingFee=Number(b.shippingFee||0);

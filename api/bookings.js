@@ -3,6 +3,16 @@ const { send, requireAdmin, makeCode, money } = require("./_utils");
 const { buildLockWindow, overlaps } = require("./_bookingTime");
 const { sendTelegram, escapeHtml } = require("./_telegram");
 
+function normalizeVNPhone(value) {
+  return String(value || "").replace(/[^\d]/g, "");
+}
+
+function isValidVNPhone(value) {
+  const phone = normalizeVNPhone(value);
+  return /^(0\d{9}|84\d{9})$/.test(phone);
+}
+
+
 function cleanItems(items){
   return (Array.isArray(items)?items:[])
     .map(x=>({id:String(x.id||""),name:String(x.name||"Món"),price:Number(x.price||0),qty:Math.max(1,Number(x.qty||1))}))
@@ -20,6 +30,13 @@ module.exports=async function handler(req,res){
   }
   if(req.method==="POST"){
     const b=req.body||{}, table=String(b.table||"").toUpperCase().trim();
+    if (!isValidVNPhone(b.phone)) {
+      return send(res, 400, {
+        ok: false,
+        error: "Số điện thoại chưa đúng. Vui lòng nhập 10 số, ví dụ: 0912345678."
+      });
+    }
+
     if(!b.name||!b.phone||!b.date||!b.time||!table) return send(res,400,{ok:false,error:"Thiếu thông tin đặt bàn"});
     if(await hasConflict(table,b.date,b.time)) return send(res,409,{ok:false,error:"Bàn này đã được đặt trong khung giờ gần nhất"});
     const items=cleanItems(b.preorderItems||b.items||[]);
