@@ -2,7 +2,7 @@ const { query, transaction, row } = require("./_db");
 const { send, requireAdmin, money, makeCode } = require("./_utils");
 const { buildLockWindow } = require("./_bookingTime");
 const { sendTelegram, escapeHtml } = require("./_telegram");
-const allowed={orders:["new","processing","delivering","done","cancelled"],bookings:["new","confirmed","done","cancelled"]};
+const allowed={orders:["new","processing","delivering","debt","done","cancelled"],bookings:["new","confirmed","debt","done","cancelled"]};
 
 async function createSession(client,b){
   if(b.session_id) return { id:b.session_id, sessionCode:b.session_code || "", window:{ lockStartText:b.lock_start_text || "", lockEndText:b.lock_end_text || "" }, preorderSubtotal:Number(b.preorder_subtotal||0) };
@@ -29,6 +29,7 @@ module.exports=async function handler(req,res){
     const orderCode=old.order_code||id;
     if(status==="processing") await sendTelegram(`👨‍🍳 <b>ĐƠN SHIP ĐANG LÀM</b>\n\nKhách: <b>${escapeHtml(customer.name || "")}</b>\nMã đơn: <b>${escapeHtml(orderCode)}</b>`);
     if(status==="delivering") await sendTelegram(`🛵 <b>ĐƠN SHIP ĐANG GIAO</b>\n\nKhách: <b>${escapeHtml(customer.name || "")}</b>\nMã đơn: <b>${escapeHtml(orderCode)}</b>\nĐịa chỉ: ${escapeHtml(customer.address || "")}`);
+    if(status==="debt") await sendTelegram(`🧾 <b>ĐƠN SHIP GHI NỢ</b>\n\nKhách: <b>${escapeHtml(customer.name || "")}</b>\nSĐT: <b>${escapeHtml(customer.phone || "")}</b>\nMã đơn: <b>${escapeHtml(orderCode)}</b>\nSố tiền nợ: <b>${money(old.total || 0)}</b>`);
     if(status==="done") await sendTelegram(`🚚 <b>SHIP HOÀN THÀNH</b>\n\nKhách: <b>${escapeHtml(customer.name || "")}</b>\nSĐT: <b>${escapeHtml(customer.phone || "")}</b>\nĐịa chỉ: ${escapeHtml(customer.address || "")}\n\nMã đơn: <b>${escapeHtml(orderCode)}</b>\nTổng tiền: <b>${money(old.total || 0)}</b>\n\n✅ Đã thanh toán hoàn tất`);
     if(status==="cancelled") await sendTelegram(`❌ <b>ĐƠN SHIP ĐÃ HỦY</b>\n\nKhách: <b>${escapeHtml(customer.name || "")}</b>\nMã đơn: <b>${escapeHtml(orderCode)}</b>`);
     return send(res,200,{ok:true});
@@ -48,7 +49,8 @@ module.exports=async function handler(req,res){
   });
   if(status==="confirmed") await sendTelegram(`✅ <b>ĐÃ XÁC NHẬN ĐẶT BÀN</b>\n\nKhách: <b>${escapeHtml(booking.name || "")}</b>\nBàn: <b>${escapeHtml(booking.table_id || "")}</b>\nNgày: <b>${escapeHtml(booking.date || "")}</b>\nGiờ: <b>${escapeHtml(booking.time || "")}</b>\nKhóa bàn: <b>${escapeHtml(created?.window?.lockStartText || "")} → ${escapeHtml(created?.window?.lockEndText || "")}</b>\n\n🍽 Phiên bàn <b>${escapeHtml(created?.sessionCode || "")}</b> đã được tạo.${created?.preorderSubtotal ? `\nMón đặt trước: <b>${money(created.preorderSubtotal)}</b>` : ""}`);
   if(status==="cancelled") await sendTelegram(`❌ <b>ĐẶT BÀN ĐÃ HỦY</b>\n\nKhách: <b>${escapeHtml(booking.name || "")}</b>\nBàn: <b>${escapeHtml(booking.table_id || "")}</b>\n${escapeHtml(booking.date || "")} - ${escapeHtml(booking.time || "")}\n\nBàn đã mở lại.`);
-  if(status==="done") await sendTelegram(`✅ <b>ĐẶT BÀN ĐÃ HOÀN THÀNH</b>\n\nKhách: <b>${escapeHtml(booking.name || "")}</b>\nBàn: <b>${escapeHtml(booking.table_id || "")}</b>\n${escapeHtml(booking.date || "")} - ${escapeHtml(booking.time || "")}`);
+  if(status==="debt") await sendTelegram(`🧾 <b>ĐẶT BÀN GHI NỢ</b>\n\nKhách: <b>${escapeHtml(booking.name || "")}</b>\nBàn: <b>${escapeHtml(booking.table_id || "")}</b>\n${escapeHtml(booking.date || "")} - ${escapeHtml(booking.time || "")}`);
+   if(status==="done") await sendTelegram(`✅ <b>ĐẶT BÀN ĐÃ HOÀN THÀNH</b>\n\nKhách: <b>${escapeHtml(booking.name || "")}</b>\nBàn: <b>${escapeHtml(booking.table_id || "")}</b>\n${escapeHtml(booking.date || "")} - ${escapeHtml(booking.time || "")}`);
   return send(res,200,{ok:true});
  }catch(e){console.error(e);send(res,500,{ok:false,error:e.message});}
 };
