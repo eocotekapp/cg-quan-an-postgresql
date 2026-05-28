@@ -2557,3 +2557,17 @@ body:not(.admin-page) .price{color:var(--terra-gold)!important}
 body:not(.admin-page) .add-btn{background:linear-gradient(135deg,#d9a93f,#fff0a9)!important;color:#130e05!important;border-radius:15px!important;box-shadow:0 12px 32px rgba(241,200,107,.20)!important}
 body:not(.admin-page) .panel,body:not(.admin-page) .card,body:not(.admin-page) .contact-card,body:not(.admin-page) .booking-layout>*,body:not(.admin-page) .mini-cart-popup{background:rgba(13,16,14,.78)!important;border:1px solid rgba(255,255,255,.11)!important;backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important;box-shadow:0 18px 70px rgba(0,0,0,.30)!important}
 @media(max-width:760px){body:not(.admin-page) .hero{min-height:620px!important;padding-left:14px!important;padding-right:14px!important;border-radius:0 0 28px 28px!important}body:not(.admin-page) .hero h1{font-size:clamp(42px,13vw,64px)!important}body:not(.admin-page) .menu-grid{grid-template-columns:1fr!important}}
+
+.action-debt{
+  background:linear-gradient(135deg,#7c4dff,#b388ff)!important;
+  color:#fff!important;
+  border:0!important;
+}
+.status-debt{
+  background:rgba(124,77,255,.22)!important;
+  color:#dfd0ff!important;
+  border-color:rgba(179,136,255,.45)!important;
+}
+.bottom-task[data-status-filter="debt"].active{
+  background:linear-gradient(135deg,rgba(124,77,255,.8),rgba(179,136,255,.45))!important;
+}

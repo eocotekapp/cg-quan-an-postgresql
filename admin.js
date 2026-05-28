@@ -158,6 +158,7 @@ function getStatusLabel(status, fallback = "") {
     new: "Mới",
     pending: "Chờ xác nhận",
     confirmed: "Đã xác nhận",
+    debt: "Đơn nợ",
     done: "Hoàn thành",
     completed: "Hoàn thành",
     cancelled: "Đã huỷ",
@@ -212,6 +213,7 @@ function isOrderConfirmedStatus(s){
 function normalizedStatus(item){
   const s = String(item.status || "new");
   if (s === "done") return "done";
+  if (s === "debt") return "debt";
   if (s === "cancelled") return "cancelled";
   if (isOrderConfirmedStatus(s)) return "confirmed";
   return "new";
@@ -293,9 +295,10 @@ function renderAppOrderCard(item){
     </div>
     <div class="app-order-actions">
       ${status === "new" ? `<button class="action-btn action-confirm" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="${isBooking ? "confirmed" : "processing"}">Xác nhận</button>` : ""}
-      ${status === "confirmed" && !isBooking ? `<button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="delivering">Đang giao</button><button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="done">Hoàn thành</button>` : ""}
-      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button><button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
-      ${status !== "done" && status !== "cancelled" ? `<button class="action-btn action-cancel" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="cancelled">Hủy</button>` : ""}
+      ${status === "confirmed" && !isBooking ? `<button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="delivering">Đang giao</button><button class="action-btn action-debt" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="debt">Ghi nợ</button><button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="done">Hoàn thành</button>` : ""}
+      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button><button class="action-btn action-debt" data-session-debt="${escapeHtml(item.sessionId)}">Ghi nợ</button><button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
+      ${status === "debt" ? `<button class="action-btn action-done" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="done">Thanh toán nợ</button>` : ""}
+      ${status !== "done" && status !== "cancelled" && status !== "debt" ? `<button class="action-btn action-cancel" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="cancelled">Hủy</button>` : ""}
       ${status === "done" || status === "cancelled" ? `<button class="action-btn action-delete" ${isBooking ? `data-delete-booking="${escapeHtml(item.id)}"` : `data-delete-order="${escapeHtml(item.id)}"`}>Xoá hẳn</button>` : ""}
     </div>
   </article>`;
@@ -333,9 +336,10 @@ function renderMiniOrderCard(item){
     </div>
     <div class="admin-actions dash-actions">
       ${status === "new" ? `<button class="action-btn action-confirm" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="${isBooking ? "confirmed" : "processing"}">Xác nhận</button>` : ""}
-      ${status === "confirmed" && !isBooking ? `<button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="delivering">Đang giao</button><button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="done">Hoàn thành</button>` : ""}
-      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button><button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
-      ${status !== "done" && status !== "cancelled" ? `<button class="action-btn action-cancel" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="cancelled">Hủy</button>` : ""}
+      ${status === "confirmed" && !isBooking ? `<button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="delivering">Đang giao</button><button class="action-btn action-debt" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="debt">Ghi nợ</button><button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(item.id)}" data-status="done">Hoàn thành</button>` : ""}
+      ${status === "confirmed" && isBooking && item.sessionId ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(item.sessionId)}" data-session-table="${escapeHtml(item.table||"")}">+ Thêm món</button><button class="action-btn action-debt" data-session-debt="${escapeHtml(item.sessionId)}">Ghi nợ</button><button class="action-btn action-done" data-session-close="${escapeHtml(item.sessionId)}">Thanh toán</button>` : ""}
+      ${status === "debt" ? `<button class="action-btn action-done" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="done">Thanh toán nợ</button>` : ""}
+      ${status !== "done" && status !== "cancelled" && status !== "debt" ? `<button class="action-btn action-cancel" data-type="${kind}" data-id="${escapeHtml(item.id)}" data-status="cancelled">Hủy</button>` : ""}
       ${status === "done" || status === "cancelled" ? `<button class="action-btn action-delete" ${isBooking ? `data-delete-booking="${escapeHtml(item.id)}"` : `data-delete-order="${escapeHtml(item.id)}"`}>Xoá hẳn</button>` : ""}
     </div>
   </article>`;
@@ -346,6 +350,7 @@ function renderDashboardFeed(orders, bookings){
   const counts = {
     new: all.filter(x => normalizedStatus(x)==="new").length,
     confirmed: all.filter(x => normalizedStatus(x)==="confirmed").length,
+    debt: all.filter(x => normalizedStatus(x)==="debt").length,
     done: all.filter(x => normalizedStatus(x)==="done").length,
     cancelled: all.filter(x => normalizedStatus(x)==="cancelled").length
   };
@@ -353,6 +358,7 @@ function renderDashboardFeed(orders, bookings){
   const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
   setText("#countNew", counts.new);
   setText("#countConfirmed", counts.confirmed);
+  setText("#countDebt", counts.debt);
   setText("#countDone", counts.done);
   setText("#countCancelled", counts.cancelled);
 
@@ -366,7 +372,7 @@ function renderDashboardFeed(orders, bookings){
   if (currentKindFilter !== "all") list = list.filter(x => itemKind(x) === currentKindFilter);
   if (currentStatusFilter === "new") list = list.filter(x => x.status === "new");
 
-  const titleMap = {new:"Đơn chờ xác nhận",confirmed:"Đơn đã xác nhận",done:"Đơn hoàn thành",cancelled:"Đơn đã hủy"};
+  const titleMap = {new:"Đơn chờ xác nhận",confirmed:"Đơn đã xác nhận",debt:"Đơn nợ",done:"Đơn hoàn thành",cancelled:"Đơn đã hủy"};
   const kindMap = {all:"Tất cả",bookings:"Đơn đặt bàn",orders:"Đơn ship"};
   const title = document.querySelector("#dashboardPanel h2");
   if (title) title.textContent = `${titleMap[currentStatusFilter] || "Dashboard"} • ${kindMap[currentKindFilter] || "Tất cả"} (${list.length})`;
@@ -489,6 +495,7 @@ function renderOrders(items){
       ${itemsBox}
       <div class="admin-actions">
         <button class="action-btn action-confirm" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="processing">Đang xử lý</button>
+        <button class="action-btn action-debt" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="debt">Ghi nợ</button>
         <button class="action-btn action-done" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="done">Hoàn thành</button>
         <button class="action-btn action-cancel" data-type="orders" data-id="${escapeHtml(order.id)}" data-status="cancelled">Hủy</button>
         <button class="action-btn action-delete" data-delete-order="${escapeHtml(order.id)}">Xoá hẳn</button>
@@ -518,10 +525,10 @@ function renderBookings(items){
     const session = b.sessionId ? sessionCache.find(s=>String(s.id)===String(b.sessionId)) : null;
     const sessionStatus = session?.status || "";
     const sessionIsOpen = !!session && sessionStatus === "open" && b.status !== "done" && b.status !== "cancelled";
-    const sessionIsClosed = !!session && (sessionStatus === "closed" || b.status === "done");
+    const sessionIsClosed = !!session && (sessionStatus === "closed" || sessionStatus === "debt" || b.status === "done" || b.status === "debt");
     const sessionTotal = session ? money(Number(session.total || 0)) : "";
     const canConfirm = !b.sessionId && b.status === "new";
-    const canCancel = b.status !== "done" && b.status !== "cancelled" && !sessionIsClosed;
+    const canCancel = b.status !== "done" && b.status !== "debt" && b.status !== "cancelled" && !sessionIsClosed;
 
     return `<article class="admin-card booking-row-card ${sessionIsClosed ? "booking-closed" : ""}">
       <div class="booking-grid">
@@ -538,6 +545,7 @@ function renderBookings(items){
       <div class="admin-actions">
         ${canConfirm ? `<button class="action-btn action-confirm" data-type="bookings" data-id="${escapeHtml(b.id)}" data-status="confirmed">Xác nhận & tạo phiên bàn</button>` : ""}
         ${sessionIsOpen ? `<button class="action-btn action-confirm" data-session-add-items="${escapeHtml(b.sessionId)}" data-session-table="${escapeHtml(b.table||"")}">+ Thêm món</button>
+        <button class="action-btn action-debt" data-session-debt="${escapeHtml(b.sessionId)}">Ghi nợ</button>
         <button class="action-btn action-done" data-session-close="${escapeHtml(b.sessionId)}">Thanh toán / Hoàn thành</button>` : ""}
         ${sessionIsClosed ? `<span class="status status-done">Đã đóng đơn, không thể thêm món</span>` : ""}
         ${canCancel ? `<button class="action-btn action-cancel" data-type="bookings" data-id="${escapeHtml(b.id)}" data-status="cancelled">Hủy</button>` : ""}
@@ -589,6 +597,7 @@ function renderSessions(items){
       <div class="admin-actions">
         <button class="action-btn action-confirm" data-session-add-items="${escapeHtml(s.id)}" data-session-table="${escapeHtml((s.tables||[])[0]||"")}">+ Thêm món</button>
         <button class="action-btn action-confirm" data-session-move="${escapeHtml(s.id)}">Chuyển / merge</button>
+        <button class="action-btn action-debt" data-session-debt="${escapeHtml(s.id)}">Ghi nợ</button>
         <button class="action-btn action-done" data-session-close="${escapeHtml(s.id)}">Thanh toán / Hoàn thành</button>
       </div>
     </article>`;
@@ -869,6 +878,7 @@ async function submitSessionAddItems(e){
 function bindSessionActions(){
   $$("[data-session-add-items]").forEach(btn=>btn.onclick=()=>openSessionMenuModal(btn.dataset.sessionAddItems, btn.dataset.sessionTable || ""));
   $$("[data-session-close]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"close",id:btn.dataset.sessionClose})}); toast("Đã thanh toán phiên bàn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Thanh toán phiên bàn"; $("#confirmMessage").textContent="Thanh toán, đóng phiên bàn và khóa thêm món cho đơn này?"; $("#confirmModal").classList.add("show"); });
+  $$("[data-session-debt]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"debt",id:btn.dataset.sessionDebt})}); toast("Đã chuyển phiên bàn sang đơn nợ"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Ghi nợ phiên bàn"; $("#confirmMessage").textContent="Chuyển phiên bàn này sang ĐƠN NỢ và khóa thêm món?"; $("#confirmModal").classList.add("show"); });
   $$("[data-session-move]").forEach(btn=>btn.onclick=()=>{ $("#moveSessionForm").reset(); $("#moveSessionId").value=btn.dataset.sessionMove; $("#moveSessionModal").classList.add("show"); });
 }
 

@@ -9,3 +9,17 @@
 .view-session-addon-row>b{width:28px;height:28px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,214,120,.16);color:#ffe08a}
 .view-session-addon-row strong{display:block;color:#fff}.view-session-addon-row small{display:block;color:rgba(255,255,255,.65);margin-top:2px}.view-session-addon-row em{font-style:normal;color:#9dffb0;font-weight:900}.view-session-addon-row span{color:#ffe08a;font-weight:950;white-space:nowrap}
 .view-session-addon-total{margin-top:14px;padding:14px;border-radius:16px;background:rgba(255,214,120,.12);border:1px solid rgba(255,214,120,.28);display:flex;justify-content:space-between;gap:12px;font-weight:900}.view-session-addon-total b{color:#ffe08a;font-size:22px}
+
+.action-debt{
+  background:linear-gradient(135deg,#7c4dff,#b388ff)!important;
+  color:#fff!important;
+  border:0!important;
+}
+.status-debt{
+  background:rgba(124,77,255,.22)!important;
+  color:#dfd0ff!important;
+  border-color:rgba(179,136,255,.45)!important;
+}
+.bottom-task[data-status-filter="debt"].active{
+  background:linear-gradient(135deg,rgba(124,77,255,.8),rgba(179,136,255,.45))!important;
+}
