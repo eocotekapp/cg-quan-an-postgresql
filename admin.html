@@ -183,9 +183,9 @@
   <div id="inventoryModal" class="modal"><form id="inventoryForm" class="modal-card menu-form-card">
     <div class="success-icon">📦</div><h2 id="inventoryModalTitle">Nguyên liệu</h2><input type="hidden" name="id" id="inventoryIdInput">
     <label class="field"><span>Tên nguyên liệu</span><input name="name" required></label>
-    <div class="form-row"><label class="field"><span>Đơn vị</span><input name="unit" placeholder="kg"></label><label class="field"><span>Tồn</span><input name="stock" type="number" min="0" step="0.01" inputmode="decimal"></label></div>
-    <div class="form-row"><label class="field"><span>Cảnh báo sắp hết</span><input name="minStock" type="number" min="0" step="0.01" inputmode="decimal"></label><label class="field"><span>Nhà cung cấp</span><input name="supplier"></label></div>
-    <div class="form-row"><label class="field"><span>Nhập gần nhất</span><input name="lastImportQty" type="number" min="0" step="0.01" inputmode="decimal"></label><label class="field"><span>Giá nhập</span><input name="lastImportPrice" type="number" min="0" inputmode="numeric" pattern="[0-9]*"></label></div>
+    <div class="form-row"><label class="field"><span>Đơn vị</span><input name="unit" placeholder="kg"></label><label class="field"><span>Tồn kho</span><input name="stock" type="number" min="0" step="0.01" inputmode="decimal"></label></div>
+    <div class="form-row"><label class="field"><span>Mức cảnh báo sắp hết</span><input name="minStock" type="number" min="0" step="0.01" inputmode="decimal"></label><label class="field"><span>Nhà cung cấp</span><input name="supplier"></label></div>
+    <div class="form-row"><label class="field"><span>Đã nhập</span><input name="lastImportQty" type="number" min="0" step="0.01" inputmode="decimal"></label><label class="field"><span>Giá nhập</span><input name="lastImportPrice" type="number" min="0" inputmode="numeric" pattern="[0-9]*"></label></div>
     <label class="field"><span>Ngày nhập</span><input name="lastImportDate" type="date"></label>
     <label class="field"><span>Ghi chú</span><textarea name="note"></textarea></label>
     <div class="modal-actions"><button id="inventoryCancelBtn" class="btn soft" type="button">Đóng</button><button class="btn primary" type="submit">Lưu</button></div>
