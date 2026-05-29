@@ -209,7 +209,12 @@ function renderCart() {
   $("#cartTotal").textContent = money(cartTotalValue());
 }
 function openCart(){ $("#cartDrawer").classList.add("open"); $("#overlay").classList.add("show"); }
-function closeCart(){ $("#cartDrawer").classList.remove("open"); $("#overlay").classList.add("remove"); }
+function closeCart(){
+  $("#cartDrawer")?.classList.remove("open");
+  $("#overlay")?.classList.remove("show");
+  $("#overlay")?.classList.remove("remove");
+  document.body.classList.remove("cart-open", "modal-open", "drawer-open");
+}
 
 function tableStatusLabel(status, locked) {
   if (locked) return "khóa";
