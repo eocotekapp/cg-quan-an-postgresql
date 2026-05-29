@@ -233,17 +233,77 @@ function mixedItems(orders, bookings){
   ].sort(newestFirst);
 }
 
-function renderDashboardItemsBox(item){
+function findSessionForBooking(item) {
+  if (!item || itemKind(item) !== "bookings") return null;
+
+  const bookingId = String(item.id || "");
+  const sessionId = String(item.sessionId || item.session_id || "");
+  const sessionCode = String(item.sessionCode || item.session_code || "");
+
+  return (sessionCache || []).find(session => {
+    return String(session.bookingId || session.booking_id || "") === bookingId
+      || String(session.id || "") === sessionId
+      || String(session.sessionCode || session.session_code || "") === sessionCode;
+  }) || null;
+}
+
+function normalizeDashboardItems(items) {
+  return (Array.isArray(items) ? items : [])
+    .map(item => ({
+      id: item.id || "",
+      name: item.name || "Món",
+      price: Number(item.price || 0),
+      qty: Math.max(1, Number(item.qty || 1))
+    }))
+    .filter(item => item.name);
+}
+
+function calcDashboardItemsTotal(items) {
+  return normalizeDashboardItems(items).reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 1), 0);
+}
+
+function getDashboardDisplayItems(item) {
   const isBooking = itemKind(item) === "bookings";
-  const items = isBooking
-    ? (Array.isArray(item.preorderItems) ? item.preorderItems : [])
-    : (Array.isArray(item.items) ? item.items : []);
-  const total = items.reduce((sum, x) => sum + Number(x.price || 0) * Number(x.qty || 1), 0);
-  const boxTitle = isBooking ? "Món đặt trước" : "Món trong đơn";
+
+  if (isBooking) {
+    const session = findSessionForBooking(item);
+    const sessionItems = normalizeDashboardItems(session?.summaryItems);
+
+    if (sessionItems.length) {
+      return {
+        title: "Món trong phiên bàn",
+        items: sessionItems,
+        total: Number(session?.total || calcDashboardItemsTotal(sessionItems)),
+        note: "Đã gồm món đặt trước + món gọi thêm trong phiên bàn"
+      };
+    }
+
+    const preorderItems = normalizeDashboardItems(item.preorderItems);
+    return {
+      title: "Món đặt trước",
+      items: preorderItems,
+      total: Number(item.preorderSubtotal || calcDashboardItemsTotal(preorderItems)),
+      note: preorderItems.length ? "Mới có món đặt trước, chưa có món gọi thêm" : ""
+    };
+  }
+
+  const orderItems = normalizeDashboardItems(item.items);
+  return {
+    title: "Món trong đơn",
+    items: orderItems,
+    total: Number(item.total || calcDashboardItemsTotal(orderItems)),
+    note: ""
+  };
+}
+
+function renderDashboardItemsBox(item){
+  const display = getDashboardDisplayItems(item);
+  const items = normalizeDashboardItems(display.items);
+  const total = Number(display.total || calcDashboardItemsTotal(items));
   const countText = items.length ? ` (${items.reduce((sum, x) => sum + Number(x.qty || 1), 0)} món)` : "";
 
   return `<div class="dash-items-box ${items.length ? "has-items" : "no-items"}">
-    <div class="dash-items-title"><span>🍽️ ${boxTitle}${countText}</span></div>
+    <div class="dash-items-title"><span>🍽️ ${escapeHtml(display.title)}${countText}</span></div>
     ${
       items.length
       ? `<div class="dash-items-list">
@@ -256,7 +316,8 @@ function renderDashboardItemsBox(item){
             </p>
           `).join("")}
         </div>
-        <div class="dash-items-total"><span>Tạm tính món:</span><strong>${money(total)}</strong></div>`
+        ${display.note ? `<p class="muted session-total-note">${escapeHtml(display.note)}</p>` : ""}
+        <div class="dash-items-total"><span>Tổng tiền món:</span><strong>${money(total)}</strong></div>`
       : `<p class="dash-items-empty">Chưa có món đặt kèm.</p>`
     }
   </div>`;
