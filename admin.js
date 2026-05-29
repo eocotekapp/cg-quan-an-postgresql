@@ -694,7 +694,7 @@ function renderInventory(items){
         <div class="mini-title"><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.note||"")}</small></div>
         <div class="mini-meta">
           <span>Tồn: <b>${item.stock} ${escapeHtml(item.unit||"")}</b></span>
-          <span>${item.low?'<b class="bad">Sắp hết</b>':'<b class="good">Ổn</b>'} <small>Min: ${item.minStock}</small></span>
+          <span>${item.low?'<b class="bad">Sắp hết</b>':'<b class="good">Ổn</b>'} <small>Mức Cảnh Báo: ${item.minStock}</small></span>
           <span>Nhập: <b>${item.lastImportQty||0} ${escapeHtml(item.unit||"")}</b></span>
           <span>${money(item.lastImportPrice||0)} ${item.lastImportDate?`• ${escapeHtml(item.lastImportDate)}`:""}</span>
           <span>NCC: ${escapeHtml(item.supplier||"")}</span>
