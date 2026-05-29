@@ -2571,3 +2571,35 @@ body:not(.admin-page) .panel,body:not(.admin-page) .card,body:not(.admin-page) .
 .bottom-task[data-status-filter="debt"].active{
   background:linear-gradient(135deg,rgba(124,77,255,.8),rgba(179,136,255,.45))!important;
 }
+
+
+.image-preview-modal{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:rgba(0,0,0,.82);
+  padding:18px;
+}
+.image-preview-modal.show{display:flex;}
+.image-preview-modal img{
+  max-width:96vw;
+  max-height:86vh;
+  object-fit:contain;
+  border-radius:18px;
+  box-shadow:0 20px 80px rgba(0,0,0,.55);
+}
+#imagePreviewClose{
+  position:absolute;
+  top:14px;
+  right:16px;
+  width:44px;
+  height:44px;
+  border:0;
+  border-radius:999px;
+  background:rgba(255,255,255,.14);
+  color:#fff;
+  font-size:30px;
+}
