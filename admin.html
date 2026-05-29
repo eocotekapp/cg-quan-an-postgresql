@@ -158,7 +158,13 @@
     <div class="success-icon">🍽️</div><h2 id="menuModalTitle">Thêm món</h2>
     <input type="hidden" name="id" id="menuIdInput">
     <label class="field"><span>Tên món</span><input name="name" required></label>
-    <div class="form-row"><label class="field"><span>Giá gốc</span><input name="originalPrice" type="number" min="0" inputmode="numeric" pattern="[0-9]*"></label><label class="field"><span>Giá bán</span><input name="price" type="number" min="0" required inputmode="numeric" pattern="[0-9]*"></label></div>
+    <div class="form-row"><label class="field"><span>Giá gốc</span><input
+  name="originalPrice"
+  type="text"
+  inputmode="decimal"
+  autocomplete="off"
+  data-money
+></label><label class="field"><span>Giá bán</span><input name="price" type="number" min="0" required inputmode="numeric" pattern="[0-9]*"></label></div>
     <div class="form-row"><label class="field"><span>Danh mục</span><select name="category"><option value="main">Món chính</option><option value="drink">Đồ uống</option><option value="snack">Ăn vặt</option><option value="dessert">Tráng miệng</option></select></label><label class="field"><span>Độ ưu tiên</span><input name="popular" type="number" min="0" value="50" inputmode="numeric" pattern="[0-9]*"></label></div>
     <label class="field"><span>Icon nếu không có ảnh</span><input name="icon" placeholder="🍗"></label>
     <label class="field">
