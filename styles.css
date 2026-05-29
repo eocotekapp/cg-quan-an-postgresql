@@ -2592,14 +2592,22 @@ body:not(.admin-page) .panel,body:not(.admin-page) .card,body:not(.admin-page) .
   box-shadow:0 20px 80px rgba(0,0,0,.55);
 }
 #imagePreviewClose{
-  position:absolute;
+  position:fixed;
   top:14px;
   right:16px;
-  width:44px;
-  height:44px;
+  z-index:100001;
+  width:48px;
+  height:48px;
   border:0;
   border-radius:999px;
-  background:rgba(255,255,255,.14);
+  background:rgba(255,255,255,.18);
   color:#fff;
-  font-size:30px;
+  font-size:32px;
+  line-height:48px;
+  text-align:center;
+  cursor:pointer;
+  touch-action:manipulation;
 }
+#imagePreviewClose:active{transform:scale(.94);}
+body.image-preview-open{overflow:hidden;}
+.image-preview-modal img{pointer-events:auto;}

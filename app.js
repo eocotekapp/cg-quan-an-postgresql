@@ -425,24 +425,55 @@ loadMenu();
 })();
 
 
-document.addEventListener("click", e => {
-  const img = e.target.closest("[data-preview-image]");
-  if (!img) return;
+/* ===== Preview ảnh món: mở/đóng ổn định kể cả khi HTML modal nằm sau script ===== */
+(function bindImagePreviewModal(){
+  const MODAL_ID = "imagePreviewModal";
+  const PREVIEW_ID = "imagePreviewImg";
+  const CLOSE_ID = "imagePreviewClose";
 
-  const modal = document.getElementById("imagePreviewModal");
-  const preview = document.getElementById("imagePreviewImg");
-  if (!modal || !preview) return;
+  function getModal(){ return document.getElementById(MODAL_ID); }
+  function getPreview(){ return document.getElementById(PREVIEW_ID); }
 
-  preview.src = img.dataset.previewImage || img.src;
-  modal.classList.add("show");
-});
-
-document.getElementById("imagePreviewClose")?.addEventListener("click", () => {
-  document.getElementById("imagePreviewModal")?.classList.remove("show");
-});
-
-document.getElementById("imagePreviewModal")?.addEventListener("click", e => {
-  if (e.target.id === "imagePreviewModal") {
-    e.currentTarget.classList.remove("show");
+  function closeImagePreview(){
+    const modal = getModal();
+    const preview = getPreview();
+    if (!modal) return;
+    modal.classList.remove("show");
+    document.body.classList.remove("image-preview-open");
+    if (preview) preview.removeAttribute("src");
   }
-});
+
+  function openImagePreview(img){
+    const modal = getModal();
+    const preview = getPreview();
+    if (!modal || !preview || !img) return;
+
+    preview.src = img.dataset.previewImage || img.currentSrc || img.src || "";
+    modal.classList.add("show");
+    document.body.classList.add("image-preview-open");
+  }
+
+  document.addEventListener("click", e => {
+    const closeBtn = e.target.closest(`#${CLOSE_ID}`);
+    const modal = getModal();
+
+    // Bấm nút X hoặc bấm nền tối để đóng ảnh
+    if (closeBtn || (modal && e.target === modal)) {
+      e.preventDefault();
+      e.stopPropagation();
+      closeImagePreview();
+      return;
+    }
+
+    // Bấm vào ảnh món để mở preview
+    const img = e.target.closest("[data-preview-image]");
+    if (!img) return;
+
+    e.preventDefault();
+    openImagePreview(img);
+  }, true);
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeImagePreview();
+  });
+})();
