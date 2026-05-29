@@ -395,7 +395,7 @@ textarea{min-height:92px;resize:vertical}
 .good{color:#86efac!important}.bad{color:#fca5a5!important}
 .low-stock{border-color:#7f1d1d;background:#2a1212}
 .admin-table-map-wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(260px,.55fr);gap:14px}
-.admin-table-map .table-node.table-free rect{fill:#16a34a;stroke:#86efac}
+.admin-table-map .table-node.table-free rect{fill:#3EAEF4;stroke:#86efac}
 .admin-table-map .table-node.table-reserved rect,.admin-table-map .table-node.table-pending rect{fill:#f59e0b;stroke:#fde68a}
 .admin-table-map .table-node.table-using rect{fill:#dc2626;stroke:#fecaca}
 .admin-table-map .table-node.table-locked rect,.admin-table-map .table-node.table-cleaning rect{fill:#64748b;stroke:#cbd5e1}
@@ -626,7 +626,7 @@ textarea{min-height:92px;resize:vertical}
   font-size:12px;
   font-weight:750;
 }
-.table-map .table-node.table-free rect{fill:#16a34a;stroke:#86efac}
+.table-map .table-node.table-free rect{fill:#3EAEF4;stroke:#86efac}
 .table-map .table-node.table-pending rect,
 .table-map .table-node.table-reserved rect{fill:#f59e0b;stroke:#fde68a}
 .table-map .table-node.table-using rect{fill:#dc2626;stroke:#fecaca}
@@ -714,7 +714,7 @@ textarea{min-height:92px;resize:vertical}
 
 /* BigFix v14 stability patch */
 .hidden{display:none!important}
-.table-map .table-node.table-free rect,.admin-table-map .table-node.table-free rect{fill:#16a34a;stroke:#86efac}
+.table-map .table-node.table-free rect,.admin-table-map .table-node.table-free rect{fill:#3EAEF4;stroke:#86efac}
 .table-map .table-node.table-pending rect,.table-map .table-node.table-reserved rect,.admin-table-map .table-node.table-pending rect,.admin-table-map .table-node.table-reserved rect{fill:#f59e0b;stroke:#fde68a}
 .table-map .table-node.table-using rect,.admin-table-map .table-node.table-using rect{fill:#dc2626;stroke:#fecaca}
 .table-map .table-node.table-cleaning rect,.table-map .table-node.table-locked rect,.admin-table-map .table-node.table-cleaning rect,.admin-table-map .table-node.table-locked rect{fill:#64748b;stroke:#cbd5e1}
