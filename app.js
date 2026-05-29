@@ -129,7 +129,7 @@ function renderMenu() {
     const fitClass = escapeHtml(item.imageFit || "custom-crop");
     const imgUrl = normalizeImageUrl(item.imageUrl);
     const art = imgUrl
-      ? `<img class="${fitClass} menu-img-crop" style="--img-zoom:${Number(item.imageZoom || 100) / 100};--img-x:${Number(item.imagePosX ?? 50)}%;--img-y:${Number(item.imagePosY ?? 50)}%" src="${escapeHtml(imgUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">`
+      ? `<img class="${fitClass} menu-img-crop" data-preview-image="${escapeHtml(imgUrl)}" style="--img-zoom:${Number(item.imageZoom || 100) / 100};--img-x:${Number(item.imagePosX ?? 50)}%;--img-y:${Number(item.imagePosY ?? 50)}%" src="${escapeHtml(imgUrl)}" alt="${escapeHtml(item.name)}" loading="lazy">`
       : `<span>${escapeHtml(item.icon || "🍽️")}</span>`;
     return `<article class="food-card ${imgUrl ? "has-image" : "no-image"}">
       <div class="food-art">${art}</div>
@@ -423,3 +423,26 @@ loadMenu();
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
   else bind();
 })();
+
+
+document.addEventListener("click", e => {
+  const img = e.target.closest("[data-preview-image]");
+  if (!img) return;
+
+  const modal = document.getElementById("imagePreviewModal");
+  const preview = document.getElementById("imagePreviewImg");
+  if (!modal || !preview) return;
+
+  preview.src = img.dataset.previewImage || img.src;
+  modal.classList.add("show");
+});
+
+document.getElementById("imagePreviewClose")?.addEventListener("click", () => {
+  document.getElementById("imagePreviewModal")?.classList.remove("show");
+});
+
+document.getElementById("imagePreviewModal")?.addEventListener("click", e => {
+  if (e.target.id === "imagePreviewModal") {
+    e.currentTarget.classList.remove("show");
+  }
+});
