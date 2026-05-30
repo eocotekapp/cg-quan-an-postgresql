@@ -44,6 +44,8 @@ let menuCache = [];
 let tableCache = [];
 let inventoryCache = [];
 let sessionCache = [];
+let orderCache = [];
+let bookingCache = [];
 let lastOrderCount = 0;
 let lastBookingCount = 0;
 let firstLoadDone = false;
@@ -500,6 +502,8 @@ async function loadDashboard(){
     ]);
 
     const orderItems=orders.items||[], bookingItems=bookings.items||[];
+    orderCache = orderItems;
+    bookingCache = bookingItems;
     if(firstLoadDone){
       if(orderItems.length > lastOrderCount) showNewNotice(`Có ${orderItems.length-lastOrderCount} đơn ship mới`);
       if(bookingItems.length > lastBookingCount) showNewNotice(`Có ${bookingItems.length-lastBookingCount} đặt bàn mới`);
@@ -779,16 +783,241 @@ function openTableForm(t){
   $("#tableModal").classList.add("show");
 }
 
+
+const PAYMENT_BANK_CODE = "BVBank";
+const PAYMENT_ACCOUNT_NO = "99ZP24170M29248879";
+const PAYMENT_ACCOUNT_NAME = "ZALOPAYTRAC DI THOONG";
+
+function getSessionById(id) {
+  return (sessionCache || []).find(x => String(x.id) === String(id)) || null;
+}
+
+function getBookingById(id) {
+  return (bookingCache || []).find(x => String(x.id) === String(id)) || null;
+}
+
+function getOrderById(id) {
+  return (orderCache || []).find(x => String(x.id) === String(id)) || null;
+}
+
+function getPaymentInfo(job) {
+  if (job.kind === "session") {
+    const session = getSessionById(job.id);
+    return {
+      amount: Number(session?.total || 0),
+      code: session?.sessionCode || session?.session_code || job.id,
+      title: `Phiên bàn ${session?.sessionCode || job.id}`,
+      subtitle: `Bàn ${(session?.tables || []).join("+") || session?.table || ""}`
+    };
+  }
+
+  if (job.kind === "status" && job.type === "orders") {
+    const order = getOrderById(job.id);
+    return {
+      amount: Number(order?.total || 0),
+      code: order?.orderCode || order?.order_code || job.id,
+      title: `Đơn ship ${order?.orderCode || job.id}`,
+      subtitle: order?.customer?.name || ""
+    };
+  }
+
+  if (job.kind === "status" && job.type === "bookings") {
+    const booking = getBookingById(job.id);
+    const session = (sessionCache || []).find(x =>
+      String(x.bookingId || x.booking_id || "") === String(job.id) ||
+      String(x.id || "") === String(booking?.sessionId || booking?.session_id || "")
+    );
+    return {
+      amount: Number(session?.total || booking?.paidTotal || booking?.preorderSubtotal || 0),
+      code: session?.sessionCode || booking?.sessionCode || booking?.bookingCode || job.id,
+      title: `Đặt bàn ${booking?.bookingCode || job.id}`,
+      subtitle: `Bàn ${booking?.table || booking?.table_id || ""}`
+    };
+  }
+
+  return { amount: 0, code: "CGQUANAN", title: "Thanh toán", subtitle: "" };
+}
+
+function buildVietQrUrl(amount, code) {
+  const cleanAmount = Math.max(0, Math.round(Number(amount || 0)));
+  const cleanInfo = encodeURIComponent(String(code || "CGQUANAN").replace(/[^\w\-]/g, ""));
+  const accountName = encodeURIComponent(PAYMENT_ACCOUNT_NAME);
+  return `https://img.vietqr.io/image/${PAYMENT_BANK_CODE}-${PAYMENT_ACCOUNT_NO}-compact2.png?amount=${cleanAmount}&addInfo=${cleanInfo}&accountName=${accountName}`;
+}
+
+function ensurePaymentModal() {
+  if ($("#paymentModal")) return;
+
+  const wrap = document.createElement("div");
+  wrap.id = "paymentModal";
+  wrap.className = "modal payment-modal";
+  wrap.innerHTML = `
+    <div class="modal-card payment-card">
+      <div class="success-icon">💰</div>
+      <h2>Chọn phương thức thanh toán</h2>
+      <p id="paymentTitle" class="payment-title">Thanh toán đơn</p>
+      <div class="payment-summary">
+        <span>Tổng tiền</span>
+        <b id="paymentAmountText">0đ</b>
+        <small id="paymentCodeText">Mã đơn</small>
+      </div>
+
+      <div id="paymentChoiceBox" class="payment-choice-grid">
+        <button id="paymentQrBtn" class="payment-choice-btn" type="button">📱 QR chuyển khoản</button>
+        <button id="paymentCashBtn" class="payment-choice-btn" type="button">💵 Tiền mặt</button>
+      </div>
+
+      <div id="paymentQrBox" class="payment-box hidden">
+        <img id="paymentQrImage" alt="QR chuyển khoản" class="payment-qr-img">
+        <p class="muted">Khách quét QR sẽ tự hiện đúng số tiền và nội dung chuyển khoản.</p>
+        <div class="payment-bank-info">
+          <span>BVBank</span>
+          <b>${PAYMENT_ACCOUNT_NO}</b>
+          <small>${PAYMENT_ACCOUNT_NAME}</small>
+        </div>
+        <button id="paymentQrConfirmBtn" class="btn primary full" type="button">Tôi đã nhận tiền</button>
+      </div>
+
+      <div id="paymentCashBox" class="payment-box hidden">
+        <label class="field">
+          <span>Khách đưa</span>
+          <input id="paymentCashInput" type="text" inputmode="numeric" data-money placeholder="Ví dụ: 300,000">
+        </label>
+        <div class="payment-change-line">
+          <span>Tiền thối</span>
+          <b id="paymentChangeText">0đ</b>
+        </div>
+        <button id="paymentCashConfirmBtn" class="btn primary full" type="button">Xác nhận đã thu tiền mặt</button>
+      </div>
+
+      <div class="modal-actions">
+        <button id="paymentBackBtn" class="btn soft hidden" type="button">Quay lại</button>
+        <button id="paymentCancelBtn" class="btn soft" type="button">Đóng</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+
+  $("#paymentCancelBtn").onclick = closePaymentModal;
+  $("#paymentBackBtn").onclick = showPaymentChoices;
+  $("#paymentQrBtn").onclick = showQrPayment;
+  $("#paymentCashBtn").onclick = showCashPayment;
+  $("#paymentQrConfirmBtn").onclick = () => confirmPayment("bank_qr");
+  $("#paymentCashConfirmBtn").onclick = () => confirmPayment("cash");
+  $("#paymentCashInput").addEventListener("input", updateCashChange);
+}
+
+let pendingPaymentJob = null;
+let pendingPaymentInfo = null;
+
+function openPaymentModal(job) {
+  ensurePaymentModal();
+  pendingPaymentJob = job;
+  pendingPaymentInfo = getPaymentInfo(job);
+
+  $("#paymentTitle").textContent = `${pendingPaymentInfo.title}${pendingPaymentInfo.subtitle ? " • " + pendingPaymentInfo.subtitle : ""}`;
+  $("#paymentAmountText").textContent = money(pendingPaymentInfo.amount || 0);
+  $("#paymentCodeText").textContent = `Nội dung CK: ${pendingPaymentInfo.code || ""}`;
+  $("#paymentQrImage").src = buildVietQrUrl(pendingPaymentInfo.amount, pendingPaymentInfo.code);
+  $("#paymentCashInput").value = "";
+  $("#paymentChangeText").textContent = "0đ";
+
+  showPaymentChoices();
+  $("#paymentModal").classList.add("show");
+}
+
+function closePaymentModal() {
+  $("#paymentModal")?.classList.remove("show");
+  pendingPaymentJob = null;
+  pendingPaymentInfo = null;
+}
+
+function showPaymentChoices() {
+  $("#paymentChoiceBox").classList.remove("hidden");
+  $("#paymentQrBox").classList.add("hidden");
+  $("#paymentCashBox").classList.add("hidden");
+  $("#paymentBackBtn").classList.add("hidden");
+}
+
+function showQrPayment() {
+  $("#paymentChoiceBox").classList.add("hidden");
+  $("#paymentQrBox").classList.remove("hidden");
+  $("#paymentCashBox").classList.add("hidden");
+  $("#paymentBackBtn").classList.remove("hidden");
+}
+
+function showCashPayment() {
+  $("#paymentChoiceBox").classList.add("hidden");
+  $("#paymentQrBox").classList.add("hidden");
+  $("#paymentCashBox").classList.remove("hidden");
+  $("#paymentBackBtn").classList.remove("hidden");
+  $("#paymentCashInput").focus();
+  updateCashChange();
+}
+
+function updateCashChange() {
+  const paid = readVietnamMoneyValue($("#paymentCashInput")?.value || "");
+  const amount = Number(pendingPaymentInfo?.amount || 0);
+  $("#paymentChangeText").textContent = money(Math.max(0, paid - amount));
+}
+
+async function confirmPayment(method) {
+  if (!pendingPaymentJob) return;
+
+  const job = pendingPaymentJob;
+  const info = pendingPaymentInfo || getPaymentInfo(job);
+
+  if (method === "cash") {
+    const paid = readVietnamMoneyValue($("#paymentCashInput")?.value || "");
+    if (paid < Number(info.amount || 0)) {
+      toast("Tiền khách đưa chưa đủ", "error");
+      return;
+    }
+  }
+
+  try {
+    if (job.kind === "session") {
+      await api("/api/sessions", {
+        method: "POST",
+        body: JSON.stringify({ action: "close", id: job.id, paymentMethod: method })
+      });
+      toast(method === "bank_qr" ? "Đã thanh toán QR" : "Đã thu tiền mặt");
+    } else if (job.kind === "status") {
+      await api("/api/status", {
+        method: "POST",
+        body: JSON.stringify({ type: job.type, id: job.id, status: "done", paymentMethod: method })
+      });
+      toast(method === "bank_qr" ? "Đã thanh toán QR" : "Đã thu tiền mặt");
+    }
+
+    closePaymentModal();
+    await loadDashboard();
+    bindActions();
+  } catch (err) {
+    console.error(err);
+    toast(err.message || "Không thanh toán được", "error");
+  }
+}
+
+
 function bindActions(){
   $$(".action-btn[data-type]").forEach(btn=>btn.onclick=()=>{
+    const payload = { type: btn.dataset.type, id: btn.dataset.id, status: btn.dataset.status };
+    if (payload.status === "done") {
+      openPaymentModal({ kind: "status", type: payload.type, id: payload.id });
+      return;
+    }
+
     const label = getStatusLabel(btn.dataset.status, btn.textContent.trim());
     confirmJob = async () => {
-      const payload = { type: btn.dataset.type, id: btn.dataset.id, status: btn.dataset.status };
       if (!payload.type || !payload.id || !payload.status) throw new Error("Thiếu dữ liệu nút xác nhận");
       await api("/api/status", { method: "POST", body: JSON.stringify(payload) });
       toast(`Đã cập nhật: ${label}`);
-      await loadDashboard(); bindActions();};
-    $("#confirmTitle").textContent="Xác nhận cập nhật"; $("#confirmMessage").textContent=`Chuyển trạng thái sang “${label}”?`; $("#confirmModal").classList.add("show");
+      await loadDashboard(); bindActions();
+    };
+    $("#confirmTitle").textContent="Xác nhận cập nhật";
+    $("#confirmMessage").textContent=`Chuyển trạng thái sang “${label}”?`;
+    $("#confirmModal").classList.add("show");
   });
 }
 function bindDeleteActions(){
@@ -938,7 +1167,7 @@ async function submitSessionAddItems(e){
 
 function bindSessionActions(){
   $$("[data-session-add-items]").forEach(btn=>btn.onclick=()=>openSessionMenuModal(btn.dataset.sessionAddItems, btn.dataset.sessionTable || ""));
-  $$("[data-session-close]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"close",id:btn.dataset.sessionClose})}); toast("Đã thanh toán phiên bàn"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Thanh toán phiên bàn"; $("#confirmMessage").textContent="Thanh toán, đóng phiên bàn và khóa thêm món cho đơn này?"; $("#confirmModal").classList.add("show"); });
+  $$("[data-session-close]").forEach(btn=>btn.onclick=()=>openPaymentModal({ kind:"session", id:btn.dataset.sessionClose }));
   $$("[data-session-debt]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"debt",id:btn.dataset.sessionDebt})}); toast("Đã chuyển phiên bàn sang đơn nợ"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Ghi nợ phiên bàn"; $("#confirmMessage").textContent="Chuyển phiên bàn này sang ĐƠN NỢ và khóa thêm món?"; $("#confirmModal").classList.add("show"); });
   $$("[data-session-move]").forEach(btn=>btn.onclick=()=>{ $("#moveSessionForm").reset(); $("#moveSessionId").value=btn.dataset.sessionMove; $("#moveSessionModal").classList.add("show"); });
 }
