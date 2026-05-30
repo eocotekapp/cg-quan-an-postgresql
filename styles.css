@@ -2613,98 +2613,26 @@ body.image-preview-open{overflow:hidden;}
 .image-preview-modal img{pointer-events:auto;}
 
 
-/* ===== Payment method modal ===== */
-.payment-card{
-  max-width:520px;
-}
-.payment-title{
-  margin-top:-6px;
-  color:var(--muted);
-  font-weight:800;
-}
-.payment-summary{
-  display:grid;
-  gap:7px;
-  padding:18px;
-  margin:14px 0;
-  border:1px solid rgba(255,220,150,.18);
-  border-radius:22px;
-  background:rgba(255,255,255,.045);
-}
-.payment-summary span{
-  color:var(--muted);
-  font-weight:800;
-}
-.payment-summary b{
-  font-size:34px;
-  color:var(--gold2);
-}
-.payment-summary small{
-  color:var(--muted);
-  font-weight:800;
-  word-break:break-word;
-}
-.payment-choice-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-.payment-choice-btn{
-  min-height:84px;
-  border:1px solid rgba(255,220,150,.22);
-  border-radius:22px;
-  background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.035));
-  color:var(--text);
-  font-weight:950;
-  font-size:17px;
-}
-.payment-box{
-  display:grid;
-  gap:12px;
-}
-.payment-qr-img{
-  width:min(330px,82vw);
-  margin:auto;
-  display:block;
-  border-radius:22px;
-  background:#fff;
-  padding:12px;
-}
-.payment-bank-info{
-  display:grid;
-  gap:4px;
-  padding:14px;
-  border-radius:18px;
-  background:rgba(0,0,0,.25);
-  border:1px solid rgba(255,255,255,.08);
-  text-align:center;
-}
-.payment-bank-info span,
-.payment-bank-info small{
-  color:var(--muted);
-  font-weight:800;
-}
-.payment-bank-info b{
-  color:var(--gold2);
-  font-size:18px;
-}
-.payment-change-line{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:14px 16px;
-  border-radius:18px;
-  background:rgba(34,197,94,.12);
-  border:1px solid rgba(34,197,94,.25);
-}
-.payment-change-line span{
-  color:var(--muted);
-  font-weight:800;
-}
-.payment-change-line b{
-  color:#86efac;
-  font-size:22px;
-}
-@media(max-width:520px){
-  .payment-choice-grid{grid-template-columns:1fr;}
-}
+/* ===== Payment method modal: QR chuyển khoản / Tiền mặt ===== */
+.payment-method-modal.show{display:flex!important}
+.payment-card{max-width:680px;width:min(94vw,680px);position:relative;text-align:center}
+.payment-x{position:absolute;right:18px;top:18px;width:48px;height:48px;border-radius:16px;border:0;background:#ef4444;color:#fff;font-size:28px;font-weight:900}
+.payment-icon{width:86px;height:86px;margin:0 auto 20px;border-radius:999px;display:grid;place-items:center;background:#66d17a;font-size:42px}
+.payment-summary-box{margin:18px 0;padding:20px;border:1px solid rgba(238,205,120,.28);border-radius:24px;background:rgba(255,255,255,.045);display:grid;gap:8px}
+.payment-summary-box span,.payment-summary-box small{color:rgba(255,255,255,.68);font-weight:800}
+.payment-summary-box b{font-size:42px;color:#f8dc86}
+.payment-choice-view{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.payment-choice-btn{border:0;border-radius:20px;padding:22px 14px;font-size:20px;font-weight:900}
+.payment-choice-btn.qr{background:linear-gradient(135deg,#f6d365,#fda085);color:#15110b}
+.payment-choice-btn.cash{background:linear-gradient(135deg,#4ade80,#22c55e);color:#04140a}
+.payment-detail-view.hidden{display:none!important}
+.qr-box{width:min(86vw,410px);height:min(86vw,410px);margin:18px auto;padding:14px;border-radius:26px;background:#fff;display:grid;place-items:center;overflow:hidden}
+.qr-box img{width:100%;height:100%;object-fit:contain;display:block}
+.bank-info-box{margin:16px 0;padding:18px;border-radius:20px;background:rgba(0,0,0,.24);display:grid;gap:8px}
+.bank-info-box b,.bank-info-box strong,.bank-info-box span{display:block}
+.bank-info-box strong{font-size:22px;color:#f8dc86}
+.cash-change-box{margin:14px 0 18px;padding:18px;border-radius:20px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cash-change-box span{color:rgba(255,255,255,.72);font-weight:800}
+.cash-change-box b{font-size:28px;color:#9ee7a8}
+.center{text-align:center}
+@media(max-width:640px){.payment-choice-view{grid-template-columns:1fr}.payment-summary-box b{font-size:34px}.payment-card{padding:22px}.qr-box{width:min(82vw,360px);height:min(82vw,360px)}}
