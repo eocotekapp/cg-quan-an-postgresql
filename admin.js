@@ -817,6 +817,138 @@ function resetPaymentBankConfig() {
   return getPaymentBankConfig();
 }
 
+
+function parseEmvTlv(input) {
+  const raw = String(input || "").replace(/\s+/g, "").trim();
+  const result = [];
+  let i = 0;
+
+  while (i + 4 <= raw.length) {
+    const id = raw.slice(i, i + 2);
+    const lenText = raw.slice(i + 2, i + 4);
+    const len = Number(lenText);
+    if (!/^\d{2}$/.test(id) || !/^\d{2}$/.test(lenText) || !Number.isFinite(len)) break;
+    const valueStart = i + 4;
+    const valueEnd = valueStart + len;
+    if (valueEnd > raw.length) break;
+    result.push({ id, len, value: raw.slice(valueStart, valueEnd) });
+    i = valueEnd;
+    if (id === "63") break;
+  }
+
+  return result;
+}
+
+function tlvGet(list, id) {
+  return (list || []).find(x => x.id === id)?.value || "";
+}
+
+function bankNameFromVietQrBin(bin) {
+  const code = String(bin || "").trim();
+  const map = {
+    "970436": "Vietcombank",
+    "970415": "VietinBank",
+    "970418": "BIDV",
+    "970405": "Agribank",
+    "970407": "Techcombank",
+    "970422": "MB Bank",
+    "970416": "ACB",
+    "970432": "VPBank",
+    "970423": "TPBank",
+    "970403": "Sacombank",
+    "970448": "OCB",
+    "970441": "VIB",
+    "970426": "MSB",
+    "970406": "DongA Bank",
+    "970454": "VietCapitalBank/BVBank",
+    "970412": "PVcomBank",
+    "970414": "OceanBank",
+    "970443": "SHB",
+    "970431": "Eximbank",
+    "970421": "VRB",
+    "970438": "BaoVietBank",
+    "970440": "SeABank",
+    "970452": "KienlongBank",
+    "970429": "SCB",
+    "970400": "SaigonBank",
+    "970433": "VietBank",
+    "970409": "BacABank",
+    "970428": "NamABank",
+    "970439": "PublicBank Vietnam",
+    "970430": "PG Bank",
+    "970427": "VietABank",
+    "970408": "GPBank",
+    "970457": "Woori Bank Vietnam",
+    "970458": "United Overseas Bank Vietnam",
+    "970419": "NCB",
+    "546034": "Vietcombank"
+  };
+  return map[code] || "";
+}
+
+function parseVietQrRawPayload(rawPayload) {
+  const raw = String(rawPayload || "").replace(/\s+/g, "").trim();
+  if (!raw) throw new Error("Bạn chưa dán mã QR");
+  if (!/^\d{12,}$/.test(raw)) throw new Error("Mã QR không đúng dạng EMV/VietQR raw");
+
+  const root = parseEmvTlv(raw);
+  const merchantInfoRaw = tlvGet(root, "38");
+  if (!merchantInfoRaw) throw new Error("Không tìm thấy tag 38 merchant info trong QR");
+
+  const merchantInfo = parseEmvTlv(merchantInfoRaw);
+  const aid = tlvGet(merchantInfo, "00");
+  const merchantAccount = tlvGet(merchantInfo, "01");
+  if (!merchantAccount) throw new Error("Không tìm thấy merchantAccount trong QR");
+
+  const merchantAccountTlv = parseEmvTlv(merchantAccount);
+  const bankBin = tlvGet(merchantAccountTlv, "00");
+  const accountNo = tlvGet(merchantAccountTlv, "01") || tlvGet(merchantAccountTlv, "03") || "";
+  const serviceCode = tlvGet(merchantInfo, "02");
+  const amount = tlvGet(root, "54");
+  const rootName = tlvGet(root, "59");
+  const additional = parseEmvTlv(tlvGet(root, "62"));
+  const note = tlvGet(additional, "08") || tlvGet(additional, "05") || "";
+
+  return {
+    aid,
+    merchantAccount,
+    bankBin,
+    bankName: bankNameFromVietQrBin(bankBin),
+    accountNo,
+    accountName: rootName,
+    serviceCode,
+    amount,
+    note
+  };
+}
+
+function importPaymentQrToForm() {
+  const form = document.getElementById("paymentBankForm");
+  const input = document.getElementById("paymentQrImportInput");
+  if (!form || !input) return;
+
+  try {
+    const parsed = parseVietQrRawPayload(input.value);
+    form.merchantAccount.value = parsed.merchantAccount || form.merchantAccount.value;
+    if (parsed.accountNo) form.accountNo.value = parsed.accountNo;
+    if (parsed.accountName) form.accountName.value = parsed.accountName;
+    if (parsed.bankName) form.bankName.value = parsed.bankName;
+
+    const detail = [
+      parsed.bankName ? `Ngân hàng: ${parsed.bankName}` : parsed.bankBin ? `BIN ngân hàng: ${parsed.bankBin}` : "",
+      parsed.accountNo ? `STK: ${parsed.accountNo}` : "",
+      parsed.accountName ? `Tên: ${parsed.accountName}` : "",
+      parsed.amount ? `Số tiền QR mẫu: ${parsed.amount}` : "",
+      parsed.note ? `Nội dung QR mẫu: ${parsed.note}` : ""
+    ].filter(Boolean).join(" • ");
+
+    toast(detail ? `Đã import QR. ${detail}` : "Đã import merchantAccount từ QR");
+  } catch (err) {
+    console.error(err);
+    toast(err.message || "Không đọc được mã QR", "error");
+  }
+}
+
 function fillPaymentBankForm() {
   const form = document.getElementById("paymentBankForm");
   if (!form) return;
@@ -1285,6 +1417,21 @@ function bindPaymentBankSettings() {
       savePaymentBankConfig(data);
       updatePaymentBankInfoView();
       toast("Đã lưu thông tin chuyển khoản");
+    });
+  }
+
+  const importBtn = document.getElementById("importPaymentQrBtn");
+  if (importBtn && !importBtn.dataset.bound) {
+    importBtn.dataset.bound = "1";
+    importBtn.addEventListener("click", importPaymentQrToForm);
+  }
+
+  const clearImportBtn = document.getElementById("clearPaymentQrImportBtn");
+  if (clearImportBtn && !clearImportBtn.dataset.bound) {
+    clearImportBtn.dataset.bound = "1";
+    clearImportBtn.addEventListener("click", () => {
+      const input = document.getElementById("paymentQrImportInput");
+      if (input) input.value = "";
     });
   }
 

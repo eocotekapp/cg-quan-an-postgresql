@@ -151,6 +151,15 @@
                   <input name="accountName" placeholder="Ví dụ: TRAC DI THOONG">
                 </label>
                 <label class="field full-field">
+                  <span>Import mã QR ngân hàng</span>
+                  <textarea id="paymentQrImportInput" rows="4" placeholder="Dán chuỗi QR đầy đủ tại đây. Ví dụ: 000201010211..."></textarea>
+                  <small class="muted">Dán QR raw từ app ngân hàng, hệ thống sẽ tự tách merchantAccount, số tài khoản, tên ngân hàng nếu đọc được.</small>
+                </label>
+                <div class="settings-actions import-actions">
+                  <button id="importPaymentQrBtn" class="btn soft" type="button">Import mã QR</button>
+                  <button id="clearPaymentQrImportBtn" class="btn soft" type="button">Xoá mã import</button>
+                </div>
+                <label class="field full-field">
                   <span>merchantAccount của QR</span>
                   <textarea name="merchantAccount" rows="3" placeholder="Dán merchantAccount trích từ QR ngân hàng"></textarea>
                 </label>
