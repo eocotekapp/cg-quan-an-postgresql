@@ -43,6 +43,7 @@
             <button class="tab-btn" data-tab="sessions" type="button">Phiên bàn</button>
             <button class="tab-btn" data-tab="menu" type="button">Menu món</button>
             <button class="tab-btn" data-tab="inventory" type="button">Kho</button>
+            <button class="tab-btn" data-tab="settings" type="button">Cài đặt</button>
             <button class="tab-btn" data-tab="analytics" type="button">Doanh thu</button>
           </div>
           <button id="refreshBtn" class="btn primary full" type="button">Tải lại dữ liệu</button>
@@ -122,6 +123,43 @@
           <section id="inventoryPanel" class="hidden">
             <div class="menu-admin-toolbar"><div><h2>Kho nguyên liệu</h2><p class="muted">Tồn kho và cảnh báo sắp hết.</p></div><button id="addInventoryBtn" class="btn primary" type="button">+ Thêm nguyên liệu</button></div>
             <div id="inventoryList" class="admin-list menu-table-list"></div>
+          </section>
+
+
+          <section id="settingsPanel" class="hidden">
+            <div class="section-head admin-section-head">
+              <div>
+                <p class="eyebrow">Cài đặt</p>
+                <h2>Thiết lập hệ thống</h2>
+                <p class="muted">Thay đổi thông tin chuyển khoản dùng để tạo QR thanh toán.</p>
+              </div>
+            </div>
+            <div class="admin-card settings-card">
+              <h3>Thay đổi thông tin chuyển khoản</h3>
+              <p class="muted">Lưu trên trình duyệt admin này. QR sẽ dùng merchantAccount để xác định tài khoản nhận tiền.</p>
+              <form id="paymentBankForm" class="settings-form">
+                <label class="field">
+                  <span>Tên ngân hàng hiển thị</span>
+                  <input name="bankName" placeholder="Ví dụ: Vietcombank, BVBank">
+                </label>
+                <label class="field">
+                  <span>Số tài khoản hiển thị</span>
+                  <input name="accountNo" inputmode="text" placeholder="Ví dụ: 1020128632">
+                </label>
+                <label class="field">
+                  <span>Tên chủ tài khoản hiển thị</span>
+                  <input name="accountName" placeholder="Ví dụ: TRAC DI THOONG">
+                </label>
+                <label class="field full-field">
+                  <span>merchantAccount của QR</span>
+                  <textarea name="merchantAccount" rows="3" placeholder="Dán merchantAccount trích từ QR ngân hàng"></textarea>
+                </label>
+                <div class="settings-actions">
+                  <button class="btn primary" type="submit">Lưu thông tin chuyển khoản</button>
+                  <button id="resetPaymentBankBtn" class="btn soft" type="button">Khôi phục mặc định</button>
+                </div>
+              </form>
+            </div>
           </section>
 
           <section id="analyticsPanel" class="hidden">

@@ -2636,3 +2636,13 @@ body.image-preview-open{overflow:hidden;}
 .cash-change-box b{font-size:28px;color:#9ee7a8}
 .center{text-align:center}
 @media(max-width:640px){.payment-choice-view{grid-template-columns:1fr}.payment-summary-box b{font-size:34px}.payment-card{padding:22px}.qr-box{width:min(82vw,360px);height:min(82vw,360px)}}
+
+
+/* Cài đặt thanh toán */
+.settings-card{max-width:760px;margin:0 auto 120px;}
+.settings-card h3{margin:0 0 8px;font-size:24px;}
+.settings-form{display:grid;gap:14px;margin-top:18px;}
+.settings-form .full-field{grid-column:1/-1;}
+.settings-form textarea{min-height:92px;resize:vertical;}
+.settings-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;}
+@media(max-width:640px){.settings-actions{grid-template-columns:1fr;}.settings-card{margin-bottom:130px;}}

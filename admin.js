@@ -449,9 +449,10 @@ function renderDashboardFeed(orders, bookings){
 function openDrawer(){ document.body.classList.add("drawer-open"); }
 function closeDrawer(){ document.body.classList.remove("drawer-open"); }
 function showPanel(tab){
-  ["dashboard","orders","bookings","tables","sessions","menu","inventory","analytics"].forEach(name=>$(`#${name}Panel`)?.classList.toggle("hidden", name !== tab));
+  ["dashboard","orders","bookings","tables","sessions","menu","inventory","settings","analytics"].forEach(name=>$(`#${name}Panel`)?.classList.toggle("hidden", name !== tab));
   $$(".tab-btn").forEach(x=>x.classList.toggle("active", x.dataset.tab === tab));
   if(tab === "analytics") loadAnalytics(currentRange);
+  if(tab === "settings") fillPaymentBankForm();
   closeDrawer();
 }
 function setStatusFilter(status){
@@ -781,13 +782,60 @@ function openTableForm(t){
 
 
 /* ===== Thanh toán: QR chuyển khoản / Tiền mặt ===== */
-const CG_PAYMENT_BANK = {
+const CG_PAYMENT_BANK_DEFAULT = {
   bankName: "Vietcombank",
   accountNo: "1020128632",
   accountName: "TRAC DI THOONG",
   // Payload gốc lấy từ mã QR VCB của quán, chỉ thay số tiền + nội dung.
   merchantAccount: "00069704360119QRGD000102012863202"
 };
+
+const PAYMENT_BANK_STORAGE_KEY = "CG_PAYMENT_BANK";
+
+function getPaymentBankConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PAYMENT_BANK_STORAGE_KEY) || "{}");
+    return { ...CG_PAYMENT_BANK_DEFAULT, ...saved };
+  } catch (_) {
+    return { ...CG_PAYMENT_BANK_DEFAULT };
+  }
+}
+
+function savePaymentBankConfig(config) {
+  const clean = {
+    bankName: String(config.bankName || "").trim() || CG_PAYMENT_BANK_DEFAULT.bankName,
+    accountNo: String(config.accountNo || "").trim() || CG_PAYMENT_BANK_DEFAULT.accountNo,
+    accountName: String(config.accountName || "").trim() || CG_PAYMENT_BANK_DEFAULT.accountName,
+    merchantAccount: String(config.merchantAccount || "").trim() || CG_PAYMENT_BANK_DEFAULT.merchantAccount
+  };
+  localStorage.setItem(PAYMENT_BANK_STORAGE_KEY, JSON.stringify(clean));
+  return clean;
+}
+
+function resetPaymentBankConfig() {
+  localStorage.removeItem(PAYMENT_BANK_STORAGE_KEY);
+  return getPaymentBankConfig();
+}
+
+function fillPaymentBankForm() {
+  const form = document.getElementById("paymentBankForm");
+  if (!form) return;
+  const cfg = getPaymentBankConfig();
+  form.bankName.value = cfg.bankName || "";
+  form.accountNo.value = cfg.accountNo || "";
+  form.accountName.value = cfg.accountName || "";
+  form.merchantAccount.value = cfg.merchantAccount || "";
+}
+
+function updatePaymentBankInfoView() {
+  const cfg = getPaymentBankConfig();
+  const bankNameEl = document.getElementById("paymentBankNameText");
+  const accountNoEl = document.getElementById("paymentAccountNoText");
+  const accountNameEl = document.getElementById("paymentAccountNameText");
+  if (bankNameEl) bankNameEl.textContent = cfg.bankName;
+  if (accountNoEl) accountNoEl.textContent = cfg.accountNo;
+  if (accountNameEl) accountNameEl.textContent = cfg.accountName;
+}
 
 function tlv(id, value) {
   const v = String(value ?? "");
@@ -820,7 +868,7 @@ function buildVcbVietQrPayload(amount, note) {
   const info = normalizeQrNote(note);
 
   const merchantInfo = tlv("00", "A000000727") +
-    tlv("01", CG_PAYMENT_BANK.merchantAccount) +
+    tlv("01", getPaymentBankConfig().merchantAccount) +
     tlv("02", "QRIBFTTA");
 
   let payload = "";
@@ -889,9 +937,9 @@ function ensurePaymentModal() {
         <div class="qr-box"><img id="paymentQrImg" alt="QR chuyển khoản"></div>
         <p class="muted center">Khách quét QR sẽ tự hiện đúng số tiền và nội dung chuyển khoản.</p>
         <div class="bank-info-box">
-          <b>${escapeHtml(CG_PAYMENT_BANK.bankName)}</b>
-          <strong>${escapeHtml(CG_PAYMENT_BANK.accountNo)}</strong>
-          <span>${escapeHtml(CG_PAYMENT_BANK.accountName)}</span>
+          <b id="paymentBankNameText"></b>
+          <strong id="paymentAccountNoText"></strong>
+          <span id="paymentAccountNameText"></span>
         </div>
         <button id="paymentQrConfirmBtn" class="btn primary full" type="button">Tôi đã nhận tiền</button>
         <button id="paymentBackBtn1" class="btn soft full" type="button">Quay lại</button>
@@ -921,6 +969,7 @@ function ensurePaymentModal() {
   $("#paymentQrConfirmBtn").onclick = () => confirmSelectedPayment("bank_qr");
   $("#paymentCashConfirmBtn").onclick = () => confirmSelectedPayment("cash");
   wrap.addEventListener("click", e => { if (e.target.id === "paymentMethodModal") closePaymentModal(); });
+  updatePaymentBankInfoView();
 }
 
 let pendingPaymentJob = null;
@@ -947,6 +996,7 @@ function setPaymentLoading(yes) {
 
 function showQrPayment() {
   if (!pendingPaymentJob) return;
+  updatePaymentBankInfoView();
   const payload = buildVcbVietQrPayload(pendingPaymentJob.amount, pendingPaymentJob.code);
   $("#paymentQrImg").src = qrImageUrlFromPayload(payload);
   $("#paymentChoiceView").classList.add("hidden");
@@ -972,6 +1022,7 @@ function updateCashChange() {
 
 async function openPaymentModal(info) {
   ensurePaymentModal();
+  updatePaymentBankInfoView();
 
   pendingPaymentJob = {
     title: info.title || "Thanh toán",
@@ -1222,6 +1273,34 @@ function bindSessionActions(){
   $$("[data-session-debt]").forEach(btn=>btn.onclick=()=>{ confirmJob=async()=>{ await api("/api/sessions",{method:"POST",body:JSON.stringify({action:"debt",id:btn.dataset.sessionDebt})}); toast("Đã chuyển phiên bàn sang đơn nợ"); loadDashboard(); bindActions();}; $("#confirmTitle").textContent="Ghi nợ phiên bàn"; $("#confirmMessage").textContent="Chuyển phiên bàn này sang ĐƠN NỢ và khóa thêm món?"; $("#confirmModal").classList.add("show"); });
   $$("[data-session-move]").forEach(btn=>btn.onclick=()=>{ $("#moveSessionForm").reset(); $("#moveSessionId").value=btn.dataset.sessionMove; $("#moveSessionModal").classList.add("show"); });
 }
+
+
+function bindPaymentBankSettings() {
+  const form = document.getElementById("paymentBankForm");
+  if (form && !form.dataset.bound) {
+    form.dataset.bound = "1";
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      savePaymentBankConfig(data);
+      updatePaymentBankInfoView();
+      toast("Đã lưu thông tin chuyển khoản");
+    });
+  }
+
+  const resetBtn = document.getElementById("resetPaymentBankBtn");
+  if (resetBtn && !resetBtn.dataset.bound) {
+    resetBtn.dataset.bound = "1";
+    resetBtn.addEventListener("click", () => {
+      resetPaymentBankConfig();
+      fillPaymentBankForm();
+      updatePaymentBankInfoView();
+      toast("Đã khôi phục thông tin chuyển khoản mặc định");
+    });
+  }
+}
+
+bindPaymentBankSettings();
 
 $("#pinForm").addEventListener("submit", async e=>{ e.preventDefault(); try{ pin=$("#pinInput").value.trim(); await api("/api/admin-check"); sessionStorage.setItem("ADMIN_PIN",pin); showDashboard(); }catch(err){ toast(err.message,"error"); } });
 $("#logoutBtn").addEventListener("click",()=>{ clearInterval(autoRefreshTimer); sessionStorage.removeItem("ADMIN_PIN"); pin=""; showPin(); });
