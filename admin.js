@@ -949,6 +949,100 @@ function importPaymentQrToForm() {
   }
 }
 
+
+function setPaymentQrImageHint(message, type = "") {
+  const el = document.getElementById("paymentQrImageHint");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle("bad", type === "error");
+  el.classList.toggle("good", type === "ok");
+}
+
+function loadScriptOnce(src, globalName) {
+  return new Promise((resolve, reject) => {
+    if (globalName && window[globalName]) return resolve(window[globalName]);
+    const existed = Array.from(document.scripts).find(s => s.src === src);
+    if (existed) {
+      existed.addEventListener("load", () => resolve(globalName ? window[globalName] : true), { once: true });
+      existed.addEventListener("error", reject, { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => resolve(globalName ? window[globalName] : true);
+    script.onerror = () => reject(new Error("Không tải được thư viện quét QR"));
+    document.head.appendChild(script);
+  });
+}
+
+async function decodeQrFromImageFile(file) {
+  if (!file) throw new Error("Bạn chưa chọn ảnh QR");
+  if (!file.type || !file.type.startsWith("image/")) throw new Error("File chọn không phải ảnh");
+
+  const img = await new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Không đọc được ảnh QR"));
+    };
+    image.src = objectUrl;
+  });
+
+  const maxSize = 1600;
+  const scale = Math.min(1, maxSize / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round((img.naturalWidth || img.width) * scale));
+  canvas.height = Math.max(1, Math.round((img.naturalHeight || img.height) * scale));
+
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  if ("BarcodeDetector" in window) {
+    try {
+      const detector = new BarcodeDetector({ formats: ["qr_code"] });
+      const result = await detector.detect(canvas);
+      if (result && result[0] && result[0].rawValue) return result[0].rawValue;
+    } catch (err) {
+      console.warn("BarcodeDetector không quét được, chuyển sang jsQR:", err);
+    }
+  }
+
+  await loadScriptOnce("https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js", "jsQR");
+  if (!window.jsQR) throw new Error("Trình duyệt chưa hỗ trợ quét QR ảnh");
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const result = window.jsQR(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: "attemptBoth"
+  });
+
+  if (!result || !result.data) throw new Error("Không tìm thấy mã QR trong ảnh");
+  return result.data;
+}
+
+async function scanPaymentQrImageToForm() {
+  const fileInput = document.getElementById("paymentQrImageInput");
+  const textInput = document.getElementById("paymentQrImportInput");
+  const file = fileInput?.files?.[0];
+
+  try {
+    setPaymentQrImageHint("Đang quét ảnh QR...", "");
+    const raw = await decodeQrFromImageFile(file);
+    if (textInput) textInput.value = raw;
+    importPaymentQrToForm();
+    setPaymentQrImageHint("Đã quét ảnh QR thành công. Có thể bấm Lưu thông tin chuyển khoản.", "ok");
+  } catch (err) {
+    console.error(err);
+    setPaymentQrImageHint(err.message || "Không quét được ảnh QR", "error");
+    toast(err.message || "Không quét được ảnh QR", "error");
+  }
+}
+
 function fillPaymentBankForm() {
   const form = document.getElementById("paymentBankForm");
   if (!form) return;
@@ -1426,12 +1520,29 @@ function bindPaymentBankSettings() {
     importBtn.addEventListener("click", importPaymentQrToForm);
   }
 
+  const scanImageBtn = document.getElementById("scanPaymentQrImageBtn");
+  if (scanImageBtn && !scanImageBtn.dataset.bound) {
+    scanImageBtn.dataset.bound = "1";
+    scanImageBtn.addEventListener("click", scanPaymentQrImageToForm);
+  }
+
+  const qrImageInput = document.getElementById("paymentQrImageInput");
+  if (qrImageInput && !qrImageInput.dataset.bound) {
+    qrImageInput.dataset.bound = "1";
+    qrImageInput.addEventListener("change", () => {
+      if (qrImageInput.files && qrImageInput.files[0]) scanPaymentQrImageToForm();
+    });
+  }
+
   const clearImportBtn = document.getElementById("clearPaymentQrImportBtn");
   if (clearImportBtn && !clearImportBtn.dataset.bound) {
     clearImportBtn.dataset.bound = "1";
     clearImportBtn.addEventListener("click", () => {
       const input = document.getElementById("paymentQrImportInput");
+      const fileInput = document.getElementById("paymentQrImageInput");
       if (input) input.value = "";
+      if (fileInput) fileInput.value = "";
+      setPaymentQrImageHint("Chọn ảnh QR đã lưu từ app ngân hàng. Hệ thống sẽ tự quét ảnh, lấy chuỗi QR và import vào form.");
     });
   }
 
