@@ -47,7 +47,7 @@ function mapMenu(r) {
     popular:Number(r.popular||0),
     icon:r.icon,
     desc:r.description,
-    imageUrl:r.image_url,
+    imageUrl:normalizeUploadPath(r.image_url),
     available:r.available,
     imageFit:r.image_fit,
     imageZoom:r.image_zoom,
