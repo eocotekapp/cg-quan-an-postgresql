@@ -1,4 +1,4 @@
 // CG Quán Ăn config
 // Dán URL Cloudflare Tunnel API Android vào đây, ví dụ:
 // window.CG_API_BASE_URL = "https://abc.trycloudflare.com";
-window.CG_API_BASE_URL = window.CG_API_BASE_URL || "https://exposed-nursing-assess-huntington.trycloudflare.com";
+window.CG_API_BASE_URL = window.CG_API_BASE_URL || "https://optimum-garbage-destinations-municipality.trycloudflare.com";
