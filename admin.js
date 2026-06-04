@@ -5,6 +5,7 @@ function getApiBaseUrlForImage() {
     window.API_URL ||
     window.API_BASE ||
     window.CG_API_BASE_URL ||
+    localStorage.getItem("CG_API_BASE_URL") ||
     cfg.API_URL ||
     cfg.API_BASE ||
     cfg.apiUrl ||
@@ -12,102 +13,37 @@ function getApiBaseUrlForImage() {
   ).replace(/\/$/, "");
 }
 
-function fullImageUrl(url) {
+function getUploadPathFromUrl(url) {
   const raw = String(url || "").trim();
   if (!raw) return "";
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (raw.startsWith("/uploads/")) return `${getApiBaseUrlForImage()}${raw}`;
-  if (raw.startsWith("uploads/")) return `${getApiBaseUrlForImage()}/${raw}`;
+  if (raw.includes("${") || raw.includes("%7B") || raw.includes("%7D")) return "";
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      if (parsed.pathname.startsWith("/uploads/")) return parsed.pathname;
+    } catch (_) {}
+  }
+
+  if (raw.startsWith("/uploads/")) return raw;
+  if (raw.startsWith("uploads/")) return "/" + raw;
   return raw;
 }
 
-function cgApiUrl(path){
-  const base = (window.CG_API_BASE_URL || localStorage.getItem("CG_API_BASE_URL") || "").replace(/\/$/, "");
-  const p = String(path || "");
-  return p.startsWith("/api/") ? base + p : p;
-}
-function cgFetch(path, options){
-  return fetch(cgApiUrl(path), options);
-}
-
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-const money = n => new Intl.NumberFormat("vi-VN").format(Number(n || 0)) + "đ";
-
-let pin = sessionStorage.getItem("ADMIN_PIN") || "";
-let confirmJob = null;
-let autoRefreshTimer = null;
-let currentRange = "day";
-let currentStatusFilter = "new";
-let currentKindFilter = "all";
-let menuCache = [];
-let tableCache = [];
-let inventoryCache = [];
-let sessionCache = [];
-let lastOrderCount = 0;
-let lastBookingCount = 0;
-let firstLoadDone = false;
-
-async function api(path, options = {}) {
-  const res = await cgFetch(path, { headers: { "Content-Type":"application/json", "x-admin-pin": pin }, ...options });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.ok === false) throw new Error(data.error || "Có lỗi xảy ra");
-  return data;
-}
-function cgUploadUrl(path) {
-  const base = String(window.CG_API_BASE_URL || "").replace(/\/$/, "");
-  const p = String(path || "");
-  return base ? base + p : p;
-}
-
-async function uploadMenuImageIfNeeded(form) {
-  const fileInput = document.getElementById("menuImageFile");
-  const file = fileInput?.files?.[0];
-
-  if (!file) return form.imageUrl?.value?.trim?.() || "";
-
-  if (!file.type || !file.type.startsWith("image/")) throw new Error("File chọn không phải ảnh");
-
-  const max = 8 * 1024 * 1024;
-  if (file.size > max) throw new Error("Ảnh quá lớn. Tối đa 8MB");
-
-  const fd = new FormData();
-  fd.append("image", file, file.name || "menu-image.jpg");
-
-  const res = await fetch(cgUploadUrl("/api/upload"), {
-    method: "POST",
-    headers: { "x-admin-pin": pin },
-    body: fd
-  });
-
-  const text = await res.text();
-  let data = {};
-  try { data = JSON.parse(text); } catch (_) {}
-
-  if (!res.ok || data.ok === false) {
-    throw new Error(data.error || text || `Upload ảnh lỗi HTTP ${res.status}`);
+function fullImageUrl(url) {
+  const pathOrUrl = getUploadPathFromUrl(url);
+  if (!pathOrUrl) return "";
+  if (/^(data:|blob:)/i.test(pathOrUrl)) return pathOrUrl;
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  if (pathOrUrl.startsWith("/uploads/")) {
+    const base = getApiBaseUrlForImage();
+    return base ? `${base}${pathOrUrl}` : pathOrUrl;
   }
-
-  const uploaded = data.url || data.relativeUrl || "";
-  return normalizeImageUrl(uploaded);
+  return pathOrUrl;
 }
-
-function escapeHtml(v){ return String(v ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
 
 function normalizeImageUrl(url) {
-  let u = String(url || "").trim();
-  if (!u) return "";
-
-  // Dữ liệu lỗi cũ có dạng ${proto}://${host}/uploads/${filename}; không render nữa.
-  if (u.includes("${") || u.includes("%7B") || u.includes("%7D")) return "";
-
-  const apiBase = String(window.CG_API_BASE_URL || localStorage.getItem("CG_API_BASE_URL") || "").replace(/\/$/, "");
-
-  if (/^https?:\/\//i.test(u) || u.startsWith("data:") || u.startsWith("blob:")) return u;
-  if (u.startsWith("/uploads/")) return apiBase ? apiBase + u : u;
-  if (u.startsWith("uploads/")) return apiBase ? apiBase + "/" + u : "/" + u;
-
-  return u;
+  return fullImageUrl(url);
 }
 
 

@@ -1,10 +1,10 @@
-
 function getApiBaseUrlForImage() {
   const cfg = (typeof CONFIG !== "undefined" && CONFIG) ? CONFIG : {};
   return String(
     window.API_URL ||
     window.API_BASE ||
     window.CG_API_BASE_URL ||
+    localStorage.getItem("CG_API_BASE_URL") ||
     cfg.API_URL ||
     cfg.API_BASE ||
     cfg.apiUrl ||
@@ -12,31 +12,39 @@ function getApiBaseUrlForImage() {
   ).replace(/\/$/, "");
 }
 
-function fullImageUrl(url) {
+function getUploadPathFromUrl(url) {
   const raw = String(url || "").trim();
   if (!raw) return "";
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (raw.startsWith("/uploads/")) return `${getApiBaseUrlForImage()}${raw}`;
-  if (raw.startsWith("uploads/")) return `${getApiBaseUrlForImage()}/${raw}`;
+  if (raw.includes("${") || raw.includes("%7B") || raw.includes("%7D")) return "";
+
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const parsed = new URL(raw);
+      if (parsed.pathname.startsWith("/uploads/")) return parsed.pathname;
+    } catch (_) {}
+  }
+
+  if (raw.startsWith("/uploads/")) return raw;
+  if (raw.startsWith("uploads/")) return "/" + raw;
   return raw;
 }
 
+function fullImageUrl(url) {
+  const pathOrUrl = getUploadPathFromUrl(url);
+  if (!pathOrUrl) return "";
+  if (/^(data:|blob:)/i.test(pathOrUrl)) return pathOrUrl;
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  if (pathOrUrl.startsWith("/uploads/")) {
+    const base = getApiBaseUrlForImage();
+    return base ? `${base}${pathOrUrl}` : pathOrUrl;
+  }
+  return pathOrUrl;
+}
 
 function normalizeImageUrl(url) {
-  let u = String(url || "").trim();
-  if (!u) return "";
-
-  // Dữ liệu lỗi cũ có dạng ${proto}://${host}/uploads/${filename}; không render nữa.
-  if (u.includes("${") || u.includes("%7B") || u.includes("%7D")) return "";
-
-  const apiBase = String(window.CG_API_BASE_URL || localStorage.getItem("CG_API_BASE_URL") || "").replace(/\/$/, "");
-
-  if (/^https?:\/\//i.test(u) || u.startsWith("data:") || u.startsWith("blob:")) return u;
-  if (u.startsWith("/uploads/")) return apiBase ? apiBase + u : u;
-  if (u.startsWith("uploads/")) return apiBase ? apiBase + "/" + u : "/" + u;
-
-  return u;
+  return fullImageUrl(url);
 }
+
 function cgApiUrl(path){
   const base = (window.CG_API_BASE_URL || localStorage.getItem("CG_API_BASE_URL") || "").replace(/\/$/, "");
   const p = String(path || "");
