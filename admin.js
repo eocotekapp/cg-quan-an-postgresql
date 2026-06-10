@@ -1,4 +1,60 @@
 
+/* HARD_FIX_ADMIN_LOGIN_NO_RELOAD */
+(function(){
+  function getApiBase(){
+    return String(window.CG_API_BASE_URL || "").replace(/\/$/, "");
+  }
+
+  async function safeAdminLogin(e){
+    if (!e.target || e.target.id !== "pinForm") return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const input = document.querySelector("#pinInput");
+    const pinValue = input ? input.value.trim() : "";
+    const base = getApiBase();
+
+    try {
+      if (!base) throw new Error("Chưa có API URL");
+
+      const res = await fetch(base + "/api/admin-check", {
+        method: "GET",
+        headers: {
+          "x-admin-pin": pinValue
+        },
+        cache: "no-store"
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || "Sai PIN admin");
+      }
+
+      window.pin = pinValue;
+      sessionStorage.setItem("ADMIN_PIN", pinValue);
+
+      if (typeof showDashboard === "function") {
+        showDashboard();
+      } else {
+        location.reload();
+      }
+    } catch (err) {
+      if (typeof toast === "function") {
+        toast(err.message || "Không đăng nhập được", "error");
+      } else {
+        alert(err.message || "Không đăng nhập được");
+      }
+    }
+
+    return false;
+  }
+
+  document.addEventListener("submit", safeAdminLogin, true);
+})();
+
+
 function getApiBaseUrlForImage() {
   const cfg = (typeof CONFIG !== "undefined" && CONFIG) ? CONFIG : {};
   return String(
