@@ -1127,7 +1127,7 @@ function ensurePaymentModal() {
   $("#paymentBackBtn2").onclick = showPaymentChoices;
   $("#paymentQrBtn").onclick = showQrPayment;
   $("#paymentCashBtn").onclick = showCashPayment;
-  $("#cashReceivedInput").addEventListener("input", updateCashChange);
+  $("#cashReceivedInput")?.addEventListener("input", updateCashChange);
   $("#paymentQrConfirmBtn").onclick = () => confirmSelectedPayment("bank_qr");
   $("#paymentCashConfirmBtn").onclick = () => confirmSelectedPayment("cash");
   wrap.addEventListener("click", e => { if (e.target.id === "paymentMethodModal") closePaymentModal(); });
